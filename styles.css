@@ -367,7 +367,7 @@ audio {width:100%;max-width:480px;margin-top:10px}
 .unit-heading h1 {font-size:clamp(2rem,4vw,3.2rem);line-height:1.08}
 .unit-heading p {margin-top:7px;color:var(--muted)}
 .unit-heading-progress {grid-column:1/-1;max-width:460px;width:100%}
-.unit-heading-action {align-self:center}
+.unit-heading-action {align-self:center;display:grid;justify-items:end;gap:5px}
 .unit-layout {display:grid;grid-template-columns:minmax(0,1.28fr) minmax(295px,1fr);gap:17px;align-items:start}
 .unit-layout .card {min-width:0}
 .unit-layout .lesson-body .section-head {margin-bottom:0}
@@ -407,7 +407,29 @@ audio {width:100%;max-width:480px;margin-top:10px}
   .unit-more .quick-list {grid-template-columns:1fr}
 }
 .unit-jumps {display:none}
-#unit-videos,#unit-steps {scroll-margin-top:16px;outline:none}
+#unit-videos,#unit-steps,#unit-books {scroll-margin-top:16px;outline:none}
+#unit-books {margin-top:17px}
+.book-group {border-top:1px solid var(--line)}
+.book-group summary {padding:12px 0;font-size:.9rem}
+.book-group summary span {margin-inline-start:6px;font-size:.75rem;font-weight:600;color:var(--muted)}
+.book-rows {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,285px),1fr));gap:8px;margin-bottom:12px}
+.book-row {display:grid;grid-template-rows:1fr auto;gap:8px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px}
+.book-row h3 {font-size:1.04rem;margin:2px 0 4px}
+.book-pages {color:var(--green);font-size:.82rem;font-weight:750;font-variant-numeric:tabular-nums}
+.book-actions {gap:6px}
+.book-pack-callout {display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:12px;background:var(--sage);border-radius:12px}
+.book-detail {margin:8px 0 17px;background:linear-gradient(110deg,var(--sage),var(--white) 73%)}
+.book-detail h1 {font-size:clamp(1.7rem,4vw,2.9rem);margin:4px 0 9px}
+.book-detail-progress {margin-top:13px;max-width:420px}
+.book-task-group+.book-task-group {margin-top:19px}
+.book-task-group h3 {margin-bottom:8px}
+.book-task-group .grow {flex:1;min-width:0}
+.book-task-group .list-item:hover {background:var(--sage)}
+.source-chapter {padding:6px 0;border-bottom:1px solid var(--line);font-weight:700}
+.source-chapter:hover {text-decoration:underline;text-underline-offset:2px}
+.source-chapter small {display:block;color:var(--muted);font-weight:500}
 @media (max-width:760px) {
   .unit-jumps {display:flex;gap:6px;flex-wrap:wrap;margin:-6px 0 13px}
+  .unit-heading-action {justify-items:start}
+  .unit-heading-action .unit-book-jump {display:none}
 }

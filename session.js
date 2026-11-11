@@ -162,11 +162,13 @@ export function createSession(deps){
   }
   function sourceFoot(task){
     const source=findSource(task.source);
-    return source?`<p class="footer-note">Kaynak · ${esc(source.title)}${task.page?` · ${button('PDF s. '+task.page,'session-source',source.id+'|'+task.page,'','ghost slim')}`:''}</p>`:'';
+    const chapter=task.bookRef&&source?.refs.find(ref=>ref.id===task.bookRef);
+    return source?`<p class="footer-note">Kaynak · ${esc(source.title)}${chapter?` · ${esc(chapter.label)}`:''}${task.page?` · ${button('PDF s. '+task.page,'session-source',source.id+'|'+task.page,'','ghost slim')}`:''}</p>`:'';
   }
   function quizCard(task){
     const value=taskResponse(task),checked=current.show;
     const instructions=task.kind==='match'?'Her öğe için doğru karşılığı seç.':task.kind==='order'?'Kelimelere doğru sırayla dokun.':task.kind==='form'?(task.skill==='grammar'?'Boşlukları Almanca doldur.':task.skill==='listening'?'Sesi dinle ve duyduğun cümleyi Almanca yaz.':'Metne göre formu doldur.'):task.kind==='writing'?'Almanca kısa bir mesaj yaz. Üç noktaya değin ve hitap ile kapanışı ekle.':task.kind==='speaking'?'Görevi Almanca sesli yap. İstersen kaydedip kendini dinleyebilirsin.':'Doğru seçeneği işaretle.';
+    const textLang=task.textLang==='tr'?'tr':'de';
     let interaction='';
     if(task.kind==='choice'){
       interaction=`<div class="choices" role="group" aria-label="Cevap seçenekleri">${task.options.map((answer,i)=>`<button type="button" class="choice ${value===i?'selected':''} ${checked?(task.answer===i?'good':value===i?'bad':''):''}" data-action="session-choice" data-value="${i}" aria-pressed="${value===i}" ${checked?'aria-disabled="true"':''}><span class="letter">${letters[i]||i+1}</span><span lang="${task.optionLang||'de'}">${esc(answer)}</span></button>`).join('')}</div>`;
@@ -193,10 +195,10 @@ export function createSession(deps){
       <div class="row between"><span class="row">${pill(name(task.skill),skills[task.skill].icon)}<span class="small muted">${esc(topicName(task.topic))}</span></span>
       ${current.exam?'<span class="timer" id="exam-clock" aria-label="Kalan süre"></span>':''}</div>
       <h2 tabindex="-1" lang="${task.stemLang||(task.skill==='grammar'||task.source?'tr':'de')}">${esc(task.stem)}</h2>
-      <p class="instructions">${instructions}</p>
+      ${task.bookRef?'':`<p class="instructions">${instructions}</p>`}
       ${task.transcript?`<div class="actions">${canPlay?button('Sesi dinle','session-audio',task.id,'headphones','secondary'):pill('Dinleme hakkı bitti')}${current.exam?`<span class="small muted">${played} / ${plays} dinleme</span>`:'<span class="small muted">Alıştırma sesi</span>'}</div>`:''}
       ${typeof task.image==='string'&&/^data:image\/webp;base64,[a-zA-Z0-9+/=]+$/.test(task.image)?`<img class="task-picture" src="${task.image}" alt="${esc(task.imageAlt||'Görsel konuşma kartı')}">`:''}
-      ${task.text?`<div class="stimulus" lang="de">${esc(task.text)}</div>`:''}
+      ${task.text?`<div class="stimulus" lang="${textLang}">${esc(task.text)}</div>`:''}
       ${interaction}
       ${checked?feedback(task):''}
       ${sourceFoot(task)}
@@ -240,12 +242,16 @@ export function createSession(deps){
     else if(current.exam)metric=summary.total?`${summary.earned} / ${summary.total} puan${summary.pending?' · Öz değerlendirme bekliyor':''}`:'Model yanıtları kullanarak öz değerlendirmeni tamamla.';
     else metric=[possible?`${earned} / ${possible} puan`:'',self?`${self} öz değerlendirme`:''].filter(Boolean).join(' · ')||'Çalışman kaydedildi.';
     const review=current.type==='quiz'?(current.exam?current.items:current.items.filter(task=>current.results.has(task.id))):[];
+    const returnUrl='#'+current.returnRoute.replace(/^#/,'');
+    const book=current.returnRoute.startsWith('calis/kitap/');
+    const primary=current.unitStep?unitResultAction(current.topic):book?link('Kitap bölümüne dön',returnUrl,'arrow_back'):link('Bugün’e dön','#bugun','home');
+    const secondary=current.unitStep?link('Üniteye dön',returnUrl,'arrow_back','secondary'):link('İlerlememi gör','#ilerleme','bar_chart','secondary');
     return `<div class="study-frame"><section class="card study-card tint">
       ${pill(current.title,'check_circle')}
       <h2 tabindex="-1">${current.exam?'Deneme sonucu':current.unitStep==='check'&&state.lessons[current.topic]?'Ünite tamamlandı':'Çalışma tamamlandı'}</h2>
       <p>${esc(metric)}</p>
       ${current.exam?'<p class="footer-note">Bu puan bir çalışma göstergesidir. Yazma ve konuşma puanına kendi değerlendirmen eklenir.</p>':''}
-      <div class="actions">${current.unitStep?unitResultAction(current.topic):link('Bugün’e dön','#bugun','home')}${current.unitStep?link('Üniteye dön',current.returnRoute.startsWith('#')?current.returnRoute:'#'+current.returnRoute,'arrow_back','secondary'):link('İlerlememi gör','#ilerleme','bar_chart','secondary')}</div>
+      <div class="actions">${primary}${secondary}</div>
     </section>${review.length?`<section class="card">${head('Cevaplarını incele')}<div class="list">${review.map(reviewLine).join('')}</div></section>`:''}</div>`;
   }
   function render(){

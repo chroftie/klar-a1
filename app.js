@@ -221,12 +221,76 @@ const newSourceRefs={
   kurallar:[['rica',1,'Rica ve yasak kalıpları'],['fit',86,'Resmî rica']],
 };
 function unitSourceRefs(id){
-  const refs=(pack?.sources||[]).flatMap(source=>source.refs.filter(ref=>ref.topic===id).map(ref=>({source,ref})));
+  const refs=(pack?.sources||[]).flatMap(source=>{
+    const indexed=source.refs.some(ref=>ref.id);
+    return source.refs.filter(ref=>indexed?ref.topics?.includes(id):ref.topic===id).map(ref=>({source,ref}));
+  });
   for(const [sourceId,page,label] of newSourceRefs[id]||[]){
     const source=sourceById(sourceId);
-    if(source)refs.push({source,ref:{page,label}});
+    if(source&&!source.refs.some(ref=>ref.id))refs.push({source,ref:{page,label}});
   }
   return refs;
+}
+const bookGroups=[['workbook','Çalışma kitabı'],['lesson','Ders kitabı'],['exam','Sınav çalışması']];
+const bookTaskKinds={form:'Boşluk doldurma',match:'Eşleştirme',order:'Sıralama'};
+function bookRefUrl(source,ref,topic=ref.topic){
+  return '#calis/kitap/'+[source.id,ref.id,topic].map(encodeURIComponent).join('/');
+}
+function bookRefTasks(source,ref){
+  return (pack?.tasks||[]).filter(task=>task.source===source.id&&Object.hasOwn(bookTaskKinds,task.kind)&&
+    (task.bookRef?task.bookRef===ref.id:task.page>=ref.page&&task.page<=ref.endPage)).sort((a,b)=>a.page-b.page);
+}
+function bookPages(ref){
+  const range=ref.page===ref.endPage?ref.page:`${ref.page}–${ref.endPage}`;
+  return `Kitap s. ${ref.printed} · PDF s. ${range}`;
+}
+function bookPdfButton(source,page){
+  const bound=files.has('pdf:'+source.id);
+  return button(bound?'PDF sayfasını aç':'PDF bağla','source-page',source.id+'|'+page,bound?'folder_open':'upload','ghost slim');
+}
+function unitBookSection(unit){
+  const refs=unitSourceRefs(unit.id);
+  const extra=refs.filter(({ref})=>!ref.id);
+  const groups=bookGroups.map(([format,label])=>{
+    const matching=refs.filter(({ref})=>ref.format===format);
+    if(!matching.length)return '';
+    return `<details class="book-group" ${format==='workbook'?'open':''}><summary>${label} <span>${matching.length} bölüm</span></summary>
+      <div class="book-rows">${matching.map(({source,ref})=>{
+        const count=bookRefTasks(source,ref).length;
+        return `<article class="book-row">
+          <div><p class="small muted">${esc(source.title)}</p><h3 lang="${source.id==='fit'?'tr':'de'}">${esc(ref.label)}</h3>
+          <p class="book-pages">${esc(bookPages(ref))}</p>${ref.note?`<p class="small muted">${esc(ref.note)}</p>`:''}</div>
+          <div class="row wrap book-actions">${count?link(`${count} alıştırmayı çöz`,bookRefUrl(source,ref,unit.id),'play_arrow','secondary slim'):''}${bookPdfButton(source,ref.page)}</div>
+        </article>`;
+      }).join('')}</div></details>`;
+  }).join('');
+  return `<section class="card" id="unit-books" tabindex="-1" aria-labelledby="unit-book-title">
+    <div class="section-head"><div><h2 id="unit-book-title">Kitapta bu ünite</h2><p>Bu konu için çalışacağın sayfalar ve kitaba bağlı alıştırmalar.</p></div></div>
+    ${!pack||!groups?`<div class="book-pack-callout"><p class="small">Kitap bölümlerini ve alıştırmalarını görmek için güncel Klar kaynak paketini yükle.</p>${button(pack?'Paketi güncelle':'Paket yükle','import-pack','','upload','secondary slim')}</div>`:''}
+    ${groups}
+    ${extra.length?`<details class="book-group"><summary>Ek kaynaklar</summary><div class="source-pages">${extra.map(({source,ref})=>`<button type="button" data-action="source-page" data-value="${esc(source.id+'|'+ref.page)}">${esc(source.title)} · PDF s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></details>`:''}
+  </section>`;
+}
+function bookExerciseView(source,ref,unit){
+  const list=bookRefTasks(source,ref);
+  const attempts=lastAttempts(state);
+  const done=list.filter(task=>attempts.get(task.id)?.score===1).length;
+  return `${link(unit.title,unitUrl(unit.id),'arrow_back','ghost slim')}
+    <section class="card book-detail">
+      <p class="small muted">${esc(source.title)}</p><h1 lang="${source.id==='fit'?'tr':'de'}">${esc(ref.label)}</h1>
+      <p class="book-pages">${esc(bookPages(ref))}</p>${ref.note?`<p class="small muted">${esc(ref.note)}</p>`:''}
+      <div class="actions">${list.length?button('Seti çöz','book-quiz','','play_arrow'):''}${bookPdfButton(source,ref.page)}</div>
+      ${list.length?`<div class="book-detail-progress">${goal('Doğru tamamlanan alıştırmalar',done,list.length)}</div>`:''}
+    </section>
+    <section class="card">${head('Kitap alıştırmaları',list.length?pill(`${list.length} görev`):'')}
+      ${list.length?Object.entries(bookTaskKinds).map(([kind,label])=>{
+        const group=list.filter(task=>task.kind===kind);
+        if(!group.length)return '';
+        return `<div class="book-task-group"><h3>${label}</h3><div class="list">${group.map(task=>`<button type="button" class="list-item" data-action="one-task" data-value="${esc(task.id)}">
+          ${tile(kind==='match'?'library_books':'edit_note',task.skill)}<span class="grow"><strong>${esc(task.stem)}</strong><p>PDF s. ${esc(task.page)}</p></span>
+          ${attempts.has(task.id)?pill(pct(attempts.get(task.id).score),attempts.get(task.id).score===1?'check':''):''}${icon('chevron_right')}</button>`).join('')}</div></div>`;
+      }).join(''):'<p class="empty">Bu bölümün çalışmasını PDF sayfalarından yapabilirsin.</p>'}
+    </section>`;
 }
 function unitStepRows(unit,progress){
   const groups=[['Temel ders',courseSteps.slice(0,3)],['Goethe becerileri',courseSteps.slice(3,7)],['Pekiştirme',courseSteps.slice(7)]];
@@ -244,18 +308,19 @@ function unitStepRows(unit,progress){
 function unitView(unit){
   const progress=unitProgress(state,unit.id);
   const videos=unitVideos[unit.id];
-  const sourceRefs=unitSourceRefs(unit.id);
   const done=progress.done.length;
   return `${link('Üniteler','#calis','arrow_back','ghost slim')}
     <section class="card unit-heading">
       <div><div class="eyebrow">${icon('route')} Ünite ${unit.index+1} / ${lessons.length} · ${esc(courseSections[unit.stage].title)}</div>
         <h1>${esc(unit.title)}</h1><p>${esc(unit.description)}</p></div>
-      <div class="unit-heading-action">${progress.next?unitStepButton(unit.id,progress.next.id,`Sıradaki adım · ${progress.next.title}`):pill('Ünite tamamlandı','check_circle')}</div>
+      <div class="unit-heading-action">${progress.next?unitStepButton(unit.id,progress.next.id,`Sıradaki adım · ${progress.next.title}`):pill('Ünite tamamlandı','check_circle')}
+        ${button('Kitap sayfalarına git','unit-jump','unit-books','book_2','ghost slim unit-book-jump')}</div>
       <div class="unit-heading-progress">${progress.previousVersion?pill('Önceki sürümde tamamlandı','check'):''}${goal('Ünite adımları',done,courseSteps.length,'adım')}</div>
     </section>
     <nav class="unit-jumps" aria-label="Ünite içinde gezin">
       ${button('Ders notu','unit-jump','unit-lesson','','secondary slim')}
       ${button('Adımlar','unit-jump','unit-steps','','secondary slim')}
+      ${button('Kitap','unit-jump','unit-books','','secondary slim')}
       ${button('Videolar','unit-jump','unit-videos','','secondary slim')}
     </nav>
     <div class="unit-layout">
@@ -271,7 +336,6 @@ function unitView(unit){
           <div class="list">${videos.map(video=>`<a class="list-item unit-video" href="${video.url}" target="_blank" rel="noopener noreferrer">
             ${tile('play_arrow','listening')}<span class="grow"><strong lang="de">${esc(video.title)}</strong><p>${esc(video.focus)}</p></span>${icon('arrow_forward')}</a>`).join('')}</div>
         </section>
-        ${sourceRefs.length?`<section class="card"><h2>Kitapta bu ünite</h2><div class="source-pages">${sourceRefs.map(({source,ref})=>`<button type="button" data-action="source-page" data-value="${source.id}|${ref.page}">${esc(source.title)} · s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></section>`:''}
       </div>
       <div class="stack unit-steps">
         <section class="card" id="unit-steps" tabindex="-1"><div class="section-head"><div><h2>Çalışma sırası</h2><p>Bir adımı aç veya sıradaki çalışmayla devam et.</p></div></div>${unitStepRows(unit,progress)}</section>
@@ -279,7 +343,8 @@ function unitView(unit){
           <div class="quick-list">${['words','grammar',...examSkills].map(skill=>quick(skill,unit.id)).join('')}</div>
         </details>
       </div>
-    </div>`;
+    </div>
+    ${unitBookSection(unit)}`;
 }
 function currentTopic(){return route[1]==='konu'&&lessonById.has(route[2])?route[2]:'';}
 function searchWords(){
@@ -326,8 +391,21 @@ function skillView(key){
       ${listed.length>taskLimit?`<div class="actions">${button('Daha fazla göster','more-tasks','','','secondary')}</div>`:''}
     </section>`;
 }
+function currentBookRef(){
+  const [,tab,sourceId,refId,topic]=route;
+  if(tab!=='kitap')return null;
+  const source=sourceById(sourceId);
+  const ref=source?.refs.find(item=>item.id===refId);
+  const unit=lessonById.get(ref?.topics.includes(topic)?topic:ref?.topic);
+  return ref&&unit?{source,ref,unit}:null;
+}
 function learn(){
   const [,tab,topic,skill]=route;
+  if(tab==='kitap'){
+    const match=currentBookRef();
+    if(match)return bookExerciseView(match.source,match.ref,match.unit);
+    return intro('Kitap alıştırmaları',pack?'Bu kitap bölümü yüklediğin pakette bulunamadı.':'Bu kitap bölümünü açmak için güncel kaynak paketini yükle.',link('Kaynaklar','#kaynaklar','book_2','secondary'));
+  }
   if(tab==='konu'&&lessonById.has(topic)){
     if(skill==='words')return wordsView();
     if(skillById(skill))return skillView(skill);
@@ -423,15 +501,18 @@ function plan(){
 function sources(){
   return intro('Kaynaklar','Kendi PDF’lerine dön, kişisel çalışma paketini yükle veya ücretsiz resmî örnekleri aç.')+
     `<div class="stack">
-      <section class="card tint"><div class="row wrap between"><div><h2>Kişisel çalışma paketi</h2><p>${pack?`${pack.sources.length} kaynak, ${pack.tasks.length} görev ve ${pack.words.length} ek kart cihazında.`:'Klar-kaynak-paketi.json dosyasını bu cihaza ekle.'}</p></div>${button(pack?'Paketi güncelle':'Paket yükle','import-pack','','upload')}</div></section>
+      <section class="card tint"><div class="row wrap between"><div><h2>Kişisel çalışma paketi</h2><p>${pack?`${pack.sources.length} kaynak, ${pack.tasks.length} görev ve ${pack.words.length} ek kart cihazında.`:'Klar kaynak paketi dosyasını bu cihaza ekle.'}</p>
+      <p class="small muted">${pack?.revision>=2?'Kitap bölümlerini ve alıştırmaları Üniteler bölümünden açabilirsin.':'Kitap bölümleri ve yeni alıştırmalar için güncel paketi seç.'}</p></div>${button(pack?'Paketi güncelle':'Paket yükle','import-pack','','upload')}</div></section>
       ${pack?`<section>${head('Kütüphanem')}
-        <div class="dual">${pack.sources.map(s=>`<article class="card source-card">
+        <div class="dual">${pack.sources.map(s=>{
+          const indexed=s.refs.filter(ref=>ref.id);
+          return `<article class="card source-card">
           <div class="row">${tile('book_2')}<div><h3>${esc(s.title)}</h3><p class="small">${s.pages} PDF sayfası</p></div></div>
           <p class="small">${esc(s.note)}</p>
           <div class="row wrap">${files.has('pdf:'+s.id)?button('PDF’yi aç','source-page',s.id+'|1','folder_open','secondary slim'):button('PDF bağla','bind-pdf',s.id,'upload','secondary slim')}
           ${files.has('pdf:'+s.id)?button('Dosyayı değiştir','bind-pdf',s.id,'','ghost slim'):''}</div>
-          ${s.refs.length?`<details><summary>İlgili sayfalar</summary><div class="source-pages">${s.refs.map(ref=>`<button type="button" data-action="source-page" data-value="${s.id}|${ref.page}">s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></details>`:''}
-        </article>`).join('')}</div></section>`:''}
+          ${s.refs.length?`<details><summary>${indexed.length?'Kitap bölümleri':'İlgili sayfalar'}</summary><div class="source-pages">${indexed.length?indexed.map(ref=>`<a class="source-chapter" href="${esc(bookRefUrl(s,ref))}">${esc(ref.label)}<small>${esc(bookPages(ref))}</small></a>`).join(''):s.refs.map(ref=>`<button type="button" data-action="source-page" data-value="${esc(s.id+'|'+ref.page)}">PDF s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></details>`:''}
+        </article>`;}).join('')}</div></section>`:''}
       <section>${head('Ücretsiz çevrimiçi kaynaklar')}
         <div class="dual">${externalSources.map(s=>`<a class="list-item" href="${s.url}" target="_blank" rel="noopener">${tile('book_2')}<span class="grow"><strong>${esc(s.title)}</strong><p>${esc(s.description)}</p></span>${icon('arrow_forward')}</a>`).join('')}</div>
       </section>
@@ -548,7 +629,7 @@ function chooseFile(accept,onFile){
   fileInput.onchange=async()=>{
     const file=fileInput.files?.[0];
     if(file)try {await onFile(file);}
-    catch(error){notify(error.message||'Dosya açılamadı.');}
+    catch(error){notify(error?.message||'Dosya açılamadı.');}
   };
   fileInput.click();
 }
@@ -565,27 +646,31 @@ async function installPack(raw){
   rebuild();
 }
 function sourceById(key){return pack?.sources.find(s=>s.id===key);}
-function bindPdf(key){
+function bindPdf(key,page){
   const source=sourceById(key);
   if(!source)return;
   chooseFile('.pdf,application/pdf',async file=>{
     if(!file.name.toLowerCase().endsWith('.pdf')||!(await file.slice(0,5).text()).startsWith('%PDF-'))throw new Error('Bir PDF dosyası seç.');
     if(file.size>120*1024*1024)throw new Error('PDF 120 MB sınırını aşıyor.');
-    await writeDevice('pdf:'+key,file);
+    try {await writeDevice('pdf:'+key,file);}
+    catch {await writeDevice('pdf:'+key,await file.arrayBuffer());}
     files.add('pdf:'+key);
     render();notify(source.title+' bağlandı.');
+    if(page)await openPdf(key+'|'+page);
   });
 }
 async function openPdf(value){
-  const [key,page]=value.split('|');
-  if(!files.has('pdf:'+key)){bindPdf(key);return;}
+  const [key,requestedPage]=value.split('|');
+  const source=sourceById(key);
+  if(!source)return;
+  const page=Math.max(1,Math.min(Number(requestedPage)||1,source.pages||1));
+  if(!files.has('pdf:'+key)){bindPdf(key,page);return;}
   try {
     const pdf=await readDevice('pdf:'+key);
     if(!pdf){files.delete('pdf:'+key);render();notify('PDF’yi yeniden bağla.');return;}
     if(pdfUrl)URL.revokeObjectURL(pdfUrl);
-    pdfUrl=URL.createObjectURL(pdf);
-    const source=sourceById(key);
-    dialog.innerHTML=`<h2>${esc(source.title)}</h2><p>PDF sayfası ${esc(page)}. Bazı görüntüleyiciler dosyayı ilk sayfadan açabilir.</p><div class="actions"><a class="button" href="${pdfUrl}#page=${Number(page)||1}" target="_blank" rel="noopener">${icon('folder_open')} PDF’yi aç</a>${button('Kapat','close-dialog','','','secondary')}</div>`;
+    pdfUrl=URL.createObjectURL(pdf instanceof Blob?pdf:new Blob([pdf],{type:'application/pdf'}));
+    dialog.innerHTML=`<h2>${esc(source.title)}</h2><p>PDF sayfası ${page}. Bazı görüntüleyiciler dosyayı ilk sayfadan açabilir.</p><div class="actions"><a class="button" href="${pdfUrl}#page=${page}" target="_blank" rel="noopener">${icon('folder_open')} PDF’yi aç</a>${button('Kapat','close-dialog','','','secondary')}</div>`;
     if(!dialog.open)dialog.showModal();
   }catch {notify('PDF okunamadı.');}
 }
@@ -670,6 +755,11 @@ document.addEventListener('click',event=>{
   if(action==='cards'){startCards(key);return;}
   if(action==='exam'){startExam(key);return;}
   if(action==='one-task'){const task=tasks.find(q=>q.id===key);if(task)startQuiz([task],skills[task.skill].name);return;}
+  if(action==='book-quiz'){
+    const match=currentBookRef();
+    if(match)startQuiz(bookRefTasks(match.source,match.ref),match.ref.label);
+    return;
+  }
   if(action==='skill-quiz'){const topic=currentTopic()||taskTopic;const group=tasks.filter(t=>t.skill===key&&(!topic||t.topic===topic)&&(!taskType||t.kind===taskType));startQuiz(currentPriority(group).slice(0,key==='speaking'||key==='writing'?3:8),skills[key].name);return;}
   if(action==='word-test'){startQuiz(currentPriority(tasks.filter(t=>t.skill==='words'&&t.subtype===key&&(!(currentTopic()||wordTopic)||t.topic===(currentTopic()||wordTopic)))).slice(0,12),'Kelime testi');return;}
   if(action==='diagnostic'){startQuiz(['grammar','listening','reading','words'].flatMap(skill=>currentPriority(tasks.filter(t=>t.skill===skill)).slice(0,3)),'Başlangıç yoklaması');return;}
@@ -688,7 +778,7 @@ document.addEventListener('click',event=>{
   if(action==='restore')chooseFile('.json,application/json',async file=>{
     const backup=await readJson(file);
     if(backup?.kind!=='klar-backup'||backup.version!==1||!backup.state||!Array.isArray(backup.state.sessions))throw new Error('Geçerli bir Klar yedek dosyası seç.');
-    if(backup.pack)await installPack(backup.pack);
+    if(backup.pack&&(backup.pack.revision||1)>=(pack?.revision||1))await installPack(backup.pack);
     Object.assign(state,mergeState(state,backup.state));
     persist();applyTheme();render();notify('Yedekteki çalışmalar cihazındaki ilerlemeye eklendi.');
   });

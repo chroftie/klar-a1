@@ -16,6 +16,8 @@ iPhone ve iPad’de Safari’de **Paylaş → Ana Ekrana Ekle** ile Klar’ı uy
 
 Tarayıcı çalışma verisini yerel olarak saklar. Kişisel PDF’leri **Kaynaklar** bölümünde tek tek bağlayabilirsin. PDF’ler ve ses kayıtları ayrı olarak cihazda tutulur. Kayıtları **Ayarlar → Konuşma kayıtları** bölümünden indirebilirsin. Yazma ve konuşmada model yanıt ve öz değerlendirme bulunur. Deneme puanları çalışma takibi içindir.
 
+Güncel kişisel kaynak paketiyle her ünitenin **Kitapta bu ünite** bölümünde ilgili kitap dersleri, basılı ve PDF sayfa numaraları ile Klar’da çözülebilen görevler görünür. PDF’yi ilgili satırdan bir kez bağla. Paket dosyasını **Kaynaklar → Paketi güncelle** ile yenilediğinde ilerlemen ve bağlı PDF’lerin cihazda kalır.
+
 Açık ve koyu tema arasında üst çubuktan geçebilirsin. **Ayarlar → Görünüm** bölümünde sistem temasını izleme seçeneği de var.
 
 ## Yerel geliştirme
