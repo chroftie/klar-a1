@@ -44,8 +44,28 @@ const units = [
   ['davet','Hava, hobiler ve davet','Wetter, Freizeit und Feste','Davet et, plan yap ve nazikçe geri çevir.',
     'Bir davette neden yazdığını, zaman ve yeri açıkça belirt. Am ve um ile günü ve saati ayır. Uygun bir hitap ve kapanış ekle.',
     [['Hast du am Freitag Zeit?','Cuma günü vaktin var mı?'],['Die Feier beginnt um sechs Uhr.','Kutlama saat altıda başlıyor.'],['Leider kann ich nicht kommen.','Maalesef gelemem.']]],
+  ['sayilar','Sayılar ve iletişim','Zahlen und Kontaktdaten','Telefon, posta kodu ve fiyatları anlayıp söyle.',
+    'Telefon numaralarını rakam rakam okuyabilirsin. Yirmiden sonra Almancada birler önce gelir: 24, vierundzwanzig. Bir numarayı doğrulamak için “Habe ich das richtig verstanden?” de.',
+    [['Meine Nummer ist null eins sieben sechs.','Numaram sıfır bir yedi altı.'],['Die Postleitzahl ist vier null zwei eins drei.','Posta kodu dört sıfır iki bir üç.'],['Können Sie die Nummer wiederholen?','Numarayı tekrar edebilir misiniz?']]],
+  ['hobiler','Boş zaman ve hobiler','Freizeit und Hobbys','Nelerden hoşlandığını söyle, birlikte bir etkinlik planla.',
+    'Gern, eylemden hoşlandığını anlatır: Ich lese gern. Birlikte öneri yapmak için “Wollen wir …?” veya “Möchtest du …?” ile başla, ana fiili sona bırak.',
+    [['Ich lese gern Krimis.','Polisiye kitap okumayı severim.'],['Wollen wir morgen schwimmen gehen?','Yarın yüzmeye gidelim mi?'],['Am Wochenende spiele ich oft Tennis.','Hafta sonu sık sık tenis oynarım.']]],
+  ['hizmet','Hizmetler ve formlar','Beim Amt und auf der Post','Form alanlarını anla, gişede bilgi iste ve bir paket gönder.',
+    'Resmî formda Vorname ad, Nachname soyadı, Geburtsort doğum yeri, Wohnort ikamet yeri demektir. “Ich möchte …” ile amacını, “Wo kann ich …?” ile nereye gideceğini söyle.',
+    [['Ich möchte ein Paket nach Bonn schicken.','Bonn’a paket göndermek istiyorum.'],['Wo muss ich unterschreiben?','Nereye imza atmam gerekiyor?'],['Sie bekommen das Formular am Schalter.','Formu gişeden alabilirsiniz.']]],
+  ['kurallar','Kurallar ve ricalar','Regeln und höfliche Bitten','Tabelaları anla, izin iste ve nazikçe rica et.',
+    '“Sie dürfen hier nicht …” yasak bildirir. “Darf ich …?” izin ister. Rica için “Können Sie bitte …?” ile başla ve ana fiili sona koy.',
+    [['Hier dürfen Sie nicht rauchen.','Burada sigara içemezsiniz.'],['Darf ich hier fotografieren?','Burada fotoğraf çekebilir miyim?'],['Können Sie bitte die Tür schließen?','Lütfen kapıyı kapatır mısınız?']]],
 ];
-export const lessons = units.map(([id,title,german,description,note,examples],index)=>({id,title,german,description,note,examples,index}));
+export const courseSections=[
+  {title:'İlk iletişim', description:'Kendini tanıt ve temel bilgileri anlayıp paylaş.', units:['tanisma','sayilar','aile','kurs']},
+  {title:'Günlük hayat', description:'Saat, yemek, ev ve şehir içinde gündelik işleri hallet.', units:['saat','alisveris','ev','ulasim']},
+  {title:'Gündelik konuşmalar', description:'Plan yap, mesleğini anlat ve hizmetlerden yararlan.', units:['hobiler','is','giyim','hizmet']},
+  {title:'Sınava doğru', description:'Sağlık, kurallar, geçmiş ve davetler üzerinden becerilerini birleştir.', units:['saglik','kurallar','gecmis','davet']},
+];
+const byId=new Map(units.map(unit=>[unit[0],unit]));
+export const lessons=courseSections.flatMap((section,stage)=>section.units.map(id=>({unit:byId.get(id),stage})))
+  .map(({unit:[id,title,german,description,note,examples],stage},index)=>({id,title,german,description,note,examples,stage,index}));
 
 export const externalSources = [
   {title:'Goethe A1 örnek sınavları', description:'Üç yetişkin örnek seti, ses dosyaları ve sözlü sınav videosu.', url:'https://www.goethe.de/ins/tr/tr/spr/prf/ueb/pa1.html'},

@@ -1,4 +1,4 @@
-import {lessons,skills,externalSources} from './data/course.js';
+import {lessons,skills,externalSources,courseSections} from './data/course.js';
 import {words as baseWords} from './data/words.js';
 import {tasks as firstTasks,examParts} from './data/tasks.js';
 import {extraTasks,examSetB} from './data/extra.js';
@@ -8,16 +8,19 @@ import {esc,icon,tile,button,link,inline,pill,track,fmt,pct,intro,head,option} f
 import {createSession} from './session.js';
 import {vocabularyQuestions} from './data/vocab-quiz.js';
 import {drills} from './data/drills.js';
+import {unitTasks,unitForms} from './data/unit-tasks.js';
+import {unitVideos} from './data/videos.js';
+import {courseSteps,stepById,activeUnit,unitProgress,markUnitStep} from './course-progress.js';
 
 const main=document.querySelector('#content');
 const dialog=document.querySelector('#dialog');
 const status=document.querySelector('#status');
 const pages=[
-  ['bugun','Bugün','home'],['calis','Çalış','book_2'],['deneme','Deneme','event'],
+  ['bugun','Bugün','home'],['calis','Üniteler','book_2'],['deneme','Deneme','event'],
   ['ilerleme','İlerleme','bar_chart'],['plan','Planım','calendar_month'],
 ];
 const names={...Object.fromEntries(pages.map(([key,name])=>[key,name])),kaynaklar:'Kaynaklar',ayarlar:'Ayarlar',oturum:'Çalışma oturumu'};
-const baseTasks=[...firstTasks,...extraTasks,...drills];
+const baseTasks=[...firstTasks,...extraTasks,...drills,...unitTasks,...unitForms];
 const examSets=[examParts,examSetB];
 let selectedExam=0;
 const examSkills=['listening','reading','writing','speaking'];
@@ -41,7 +44,7 @@ applyTheme();
 let pack=null, files=new Set(), route=[], toastTimer, pdfUrl, media;
 let words=[...baseWords], tasks=[...baseTasks,...vocabularyQuestions(baseWords)];
 let wordQuery='', wordTopic='', wordLimit=60;
-let taskLimit=30, taskTopic='', taskType='';
+let taskLimit=30, taskTopic='', taskType='', viewStarted=Date.now();
 const fileInput=document.createElement('input');
 fileInput.type='file';
 fileInput.hidden=true;
@@ -107,15 +110,16 @@ function historyRoute(){
   if(parts[0]==='oturum')session.resumeTime();
   if(previous!==parts.join('/')){
     stopSpeech();
-    taskLimit=30;taskTopic='';taskType='';
+    taskLimit=30;taskTopic='';taskType='';wordQuery='';wordTopic='';wordLimit=60;
+    viewStarted=Date.now();
   }
   route=parts;
   render();startOfView();
 }
 
-function quick(skill){
+function quick(skill,topic=''){
   const s=skills[skill];
-  return `<a href="#calis/${skill}" class="quick card">${tile(s.icon,skill)}<span><b>${s.name}</b><small lang="de">${s.german}</small></span><span class="mi arrow" aria-hidden="true">chevron_right</span></a>`;
+  return `<a href="#calis/${topic?'konu/'+topic+'/':''}${skill}" class="quick card">${tile(s.icon,skill)}<span><b>${s.name}</b><small lang="de">${s.german}</small></span><span class="mi arrow" aria-hidden="true">chevron_right</span></a>`;
 }
 function goal(label,done,target,unit=''){
   return `<div><div class="goal-label"><span>${esc(label)}</span><span>${done} / ${target} ${esc(unit)}</span></div>${track(done,target,label)}</div>`;
@@ -124,7 +128,7 @@ function dayCells(stats){
   return `<div class="week-grid">${stats.week.map((day,i)=>`<div class="day-cell"><span>${weekdays[i][0]}</span><span class="day-dot ${day.minutes?'done':''} ${day.key===stats.today?'today':''}" aria-label="${fmt(day.date,{weekday:'long'})}, ${day.minutes} dakika">${day.minutes?icon('check'):day.date.getDate()}</span></div>`).join('')}</div>`;
 }
 function suggestionLink(focus,label='Çalışmaya başla'){
-  if(focus.type==='lesson')return link(label,'#calis/konu/'+focus.topic,'arrow_forward');
+  if(focus.type==='lesson')return focus.step?unitStepButton(focus.topic,focus.step,label):link(label,unitUrl(focus.topic),'arrow_forward');
   if(focus.type==='exam')return button(label,'exam',focus.skill,'arrow_forward');
   if(focus.type==='diagnostic')return button(label,'diagnostic','','arrow_forward');
   if(focus.type==='cards')return button(label,'cards','due','arrow_forward');
@@ -135,22 +139,28 @@ function home(){
   const examDays=examDistance(state.settings);
   const studied=stats.todayMinutes>=state.settings.daily;
   const due=dueCards(state,words).length;
-  const next=lessonById.get(focus.topic);
-  const heroTitle=next?.title||focus.title;
+  const next=activeUnit(state);
+  const progress=next?unitProgress(state,next.id):null;
   const recent=session.hasUnfinished();
-  return intro('Bugün',examDays===null?'Almanca A1 çalışma planın.':examDays<0?'Sınav tarihi geçti. Planından yeni bir tarih belirleyebilirsin.':examDays===0?'Bugün sınav günün.':`Goethe A1 sınavına ${examDays} gün kaldı.`,pill('Goethe A1 · Start Deutsch 1','school'))+
+  const label=progress?.next.id==='lesson'?'Derse başla':'Kaldığın adıma devam et';
+  const plannedUnits=Object.keys(state.lessons).length;
+  const examFocus=focus.type==='exam'||focus.type==='diagnostic';
+  return intro('Bugün',examDays===null?'Bugünkü çalışmana kaldığın adımdan devam et.':examDays<0?'Sınav tarihi geçti. Planından yeni bir tarih belirleyebilirsin.':examDays===0?'Bugün sınav günün.':`Goethe A1 sınavına ${examDays} gün kaldı.`)+
     `<div class="dashboard"><div class="stack">
       <section class="hero card"><div class="hero-copy">
-        <div class="hero-label">${icon(studied?'check_circle':'bolt')} ${studied?'Günlük hedef tamamlandı':'Bugünün odağı'}</div>
-        <h2>${esc(heroTitle)}</h2><p>${esc(focus.description)}</p>
-        ${recent?link('Oturuma dön','#oturum','arrow_forward'):suggestionLink(focus)}
+        <div class="hero-label">${icon(studied?'check_circle':'route')} ${next?`Ünite ${next.index+1} / ${lessons.length}`:'Goethe A1'}</div>
+        <h2>${esc(next?.title||'Sınav provası')}</h2>
+        <p>${progress?`<strong>${esc(progress.next.title)}</strong> · ${esc(progress.next.hint)}`:'Tüm üniteleri tamamladın. Sınav formatında pratik yap.'}</p>
+        ${recent?link('Oturuma dön','#oturum','arrow_forward'):next?unitStepButton(next.id,progress.next.id,label):link('Denemeleri aç','#deneme','arrow_forward')}
       </div></section>
-      <section>${head('Sınav becerileri',inline('Deneme çöz','#deneme'))}
-        <div class="quick-list">${examSkills.map(quick).join('')}</div>
+      <section class="card">
+        ${head('Kurs yolun',inline('Tüm üniteler','#calis'),`${plannedUnits} / ${lessons.length} ünite tamamlandı`)}
+        <div class="course-summary">${courseSections.map((section,i)=>{
+          const count=section.units.filter(id=>state.lessons[id]).length;
+          return `<a class="course-phase ${next?.stage===i?'current':''}" href="#calis/asama/${i+1}"><span>${esc(section.title)}</span><span class="small muted">${count} / ${section.units.length} ünite</span>${track(count,section.units.length,section.title)}</a>`;
+        }).join('')}</div>
       </section>
-      <section>${head('A1 çalışma rotası',inline('Tüm konular','#calis'))}
-        <div class="quick-list">${quick('words')}${quick('grammar')}</div>
-      </section>
+      ${examFocus?`<section class="card row wrap between"><div class="row">${tile(focus.icon)}<div><h3>${esc(focus.title)}</h3><p class="small muted">${esc(focus.description)}</p></div></div>${suggestionLink(focus,'Başla')}</section>`:''}
     </div><div class="stack">
       <section class="card">
         <div class="row between"><h2>Hedeflerim</h2><a class="icon-btn" href="#plan" aria-label="Planım">${icon('calendar_month')}</a></div>
@@ -167,37 +177,116 @@ function home(){
     </div></div>`;
 }
 
-function tabs(active){
-  const opts=[['','Konular'],...Object.entries(skills).map(([key,s])=>[key,s.name])];
-  return `<div class="tabs" aria-label="Çalışma türü">${opts.map(([key,name])=>`<a class="tab ${active===key?'active':''}" ${active===key?'aria-current="page"':''} href="#calis${key?'/'+key:''}">${esc(name)}</a>`).join('')}</div>`;
+const unitUrl=(id,step='')=>`#calis/konu/${id}${step?'/'+step:''}`;
+function unitStepButton(topic,step,label='Başla',style=''){
+  return button(label,'unit-step',topic+'|'+step,'arrow_forward',style);
 }
-function topicCard(l){
-  const done=Boolean(state.lessons[l.id]);
-  return `<a class="module card" href="#calis/konu/${l.id}">
-    <div class="row between"><span class="module-name" lang="de">${esc(l.german)}</span>${done?pill('Çalışıldı','check'):''}</div>
-    <h3>${esc(l.title)}</h3><p>${esc(l.description)}</p>
-    <div class="row"><span class="small muted">${words.filter(w=>w.topic===l.id).length} kelime</span><span class="mi arrow" aria-hidden="true">arrow_forward</span></div>
+function unitResultAction(topic){
+  const unit=lessonById.get(topic);
+  const progress=unitProgress(state,topic);
+  if(progress.next)return unitStepButton(topic,progress.next.id,'Sıradaki adım · '+progress.next.title);
+  const next=lessons[unit.index+1];
+  return next?link('Sıradaki ünite',unitUrl(next.id),'arrow_forward'):link('Denemelere geç','#deneme','arrow_forward');
+}
+function tabs(active){
+  const opts=[['pratik','Tüm beceriler'],...Object.entries(skills).map(([key,s])=>[key,s.name])];
+  return `<div class="tabs" aria-label="Çalışma türü">${opts.map(([key,name])=>`<a class="tab ${active===key?'active':''}" ${active===key?'aria-current="page"':''} href="#calis/${key}">${esc(name)}</a>`).join('')}</div>`;
+}
+function unitRow(unit,current){
+  const {done,completed,next}=unitProgress(state,unit.id);
+  return `<a class="unit-row ${current?'current':''}" href="${unitUrl(unit.id)}">
+    <span class="unit-number">${String(unit.index+1).padStart(2,'0')}</span>
+    <span class="grow"><strong>${esc(unit.title)}</strong><small>${esc(current&&next?`Sırada: ${next.title}`:unit.description)}</small></span>
+    <span class="unit-row-end" aria-label="${done.length} / ${courseSteps.length} adım">${completed?icon('check_circle'):`<span class="small">${done.length}/${courseSteps.length}</span>`}${icon('chevron_right')}</span>
   </a>`;
 }
-function lessonView(l){
-  const related=tasks.filter(t=>t.topic===l.id);
-  const sourceRefs=(pack?.sources||[]).flatMap(source=>source.refs.filter(ref=>ref.topic===l.id).map(ref=>({source,ref})));
-  return `${link('Konulara dön','#calis','arrow_back','ghost slim')}${intro(l.title,l.description,pill(l.german))}
-    <div class="dual">
-      <section class="card lesson-body"><h2>Ders notu</h2><p class="lesson-note">${esc(l.note)}</p>
-        <div>${l.examples.map(([de,tr],i)=>`<div class="row between lesson-example"><div><strong lang="de">${esc(de)}</strong><p>${esc(tr)}</p></div><button class="icon-btn" type="button" data-action="example" data-value="${l.id}|${i}" aria-label="Cümleyi dinle">${icon('volume_up')}</button></div>`).join('')}</div>
-        <div class="actions">${related.length?button('Konu alıştırması','topic-quiz',l.id,'play_arrow'):''}${button('Kelime kartları','cards',l.id,'library_books','secondary')}</div>
-      </section>
-      <div class="stack">
-        <section class="card"><h2>Bu konuda çalış</h2><div class="meta-list">${[...examSkills,'grammar'].filter(key=>related.some(t=>t.skill===key)).map(key=>`<div class="row between"><span>${esc(skills[key].name)} · ${related.filter(t=>t.skill===key).length} görev</span>${button('Başlat','topic-skill',l.id+'|'+key,'','secondary slim')}</div>`).join('')}</div></section>
-        ${sourceRefs.length?`<section class="card"><h2>İlgili kaynak sayfaları</h2><div class="source-pages">${sourceRefs.map(({source,ref})=>`<button type="button" data-action="source-page" data-value="${source.id}|${ref.page}">${esc(source.title)} · s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></section>`:''}
+function courseView(stage){
+  const active=activeUnit(state);
+  const filtered=Number.isInteger(stage)&&stage>=0&&stage<courseSections.length;
+  const sections=filtered?[courseSections[stage]]:courseSections;
+  return `${filtered?link('Tüm ünitelere dön','#calis','arrow_back','ghost slim'):''}${intro(filtered?sections[0].title:'Üniteler',
+    filtered?sections[0].description:'Sıradaki üniteden devam et veya çalışmak istediğin konuyu aç.',
+    link('Alıştırma arşivi','#calis/pratik','library_books','secondary'))}
+    ${!filtered&&active?`<section class="card course-next row wrap between"><div class="row">${tile('route')}<div><p class="small muted">Sıradaki ünite · ${active.index+1} / ${lessons.length}</p><h2>${esc(active.title)}</h2></div></div>${link('Üniteyi aç',unitUrl(active.id),'arrow_forward')}</section>`:''}
+    <div class="course-grid">${sections.map(section=>{
+      const completed=section.units.filter(id=>state.lessons[id]).length;
+      return `<section class="card phase-card"><div class="section-head"><div><h2>${esc(section.title)}</h2><p>${esc(section.description)}</p></div>${pill(completed+'/'+section.units.length)}</div>
+        <div class="unit-rows">${section.units.map(id=>unitRow(lessonById.get(id),active?.id===id)).join('')}</div></section>`;
+    }).join('')}</div>`;
+}
+const newSourceRefs={
+  sayilar:[['wortliste',6,'Sayılar ve sayma'],['einfach-11',14,'Sayı ve aile bilgileri']],
+  hobiler:[['menschen-11-kb',41,'Boş zaman'],['tema',33,'Boş zaman kartları']],
+  hizmet:[['fit',66,'Form doldurma'],['wortliste',9,'Alfabetik kelime listesi']],
+  kurallar:[['rica',1,'Rica ve yasak kalıpları'],['fit',86,'Resmî rica']],
+};
+function unitSourceRefs(id){
+  const refs=(pack?.sources||[]).flatMap(source=>source.refs.filter(ref=>ref.topic===id).map(ref=>({source,ref})));
+  for(const [sourceId,page,label] of newSourceRefs[id]||[]){
+    const source=sourceById(sourceId);
+    if(source)refs.push({source,ref:{page,label}});
+  }
+  return refs;
+}
+function unitStepRows(unit,progress){
+  const groups=[['Temel ders',courseSteps.slice(0,3)],['Goethe becerileri',courseSteps.slice(3,7)],['Pekiştirme',courseSteps.slice(7)]];
+  return groups.map(([name,steps])=>`<div class="step-group"><h3>${name}</h3>
+    ${steps.map(step=>{
+      const done=progress.done.includes(step.id);
+      const current=progress.next?.id===step.id;
+      return `<button type="button" class="step-row ${current?'current':''}" data-action="unit-step" data-value="${unit.id}|${step.id}">
+        ${tile(done?'check':step.icon,step.id)}
+        <span class="grow"><strong>${esc(step.title)}</strong><small>${esc(step.hint)}</small></span>
+        ${current?pill('Sırada'):''}<span class="mi" aria-hidden="true">chevron_right</span>
+      </button>`;
+    }).join('')}</div>`).join('');
+}
+function unitView(unit){
+  const progress=unitProgress(state,unit.id);
+  const videos=unitVideos[unit.id];
+  const sourceRefs=unitSourceRefs(unit.id);
+  const done=progress.done.length;
+  return `${link('Üniteler','#calis','arrow_back','ghost slim')}
+    <section class="card unit-heading">
+      <div><div class="eyebrow">${icon('route')} Ünite ${unit.index+1} / ${lessons.length} · ${esc(courseSections[unit.stage].title)}</div>
+        <h1>${esc(unit.title)}</h1><p>${esc(unit.description)}</p></div>
+      <div class="unit-heading-action">${progress.next?unitStepButton(unit.id,progress.next.id,`Sıradaki adım · ${progress.next.title}`):pill('Ünite tamamlandı','check_circle')}</div>
+      <div class="unit-heading-progress">${progress.previousVersion?pill('Önceki sürümde tamamlandı','check'):''}${goal('Ünite adımları',done,courseSteps.length,'adım')}</div>
+    </section>
+    <nav class="unit-jumps" aria-label="Ünite içinde gezin">
+      ${button('Ders notu','unit-jump','unit-lesson','','secondary slim')}
+      ${button('Adımlar','unit-jump','unit-steps','','secondary slim')}
+      ${button('Videolar','unit-jump','unit-videos','','secondary slim')}
+    </nav>
+    <div class="unit-layout">
+      <div class="stack unit-content">
+        <section class="card lesson-body" id="unit-lesson" tabindex="-1">
+          ${head('Ders notu',pill(unit.german))}
+          <p class="lesson-note">${esc(unit.note)}</p>
+          <div>${unit.examples.map(([de,tr],i)=>`<div class="row between lesson-example"><div><strong lang="de">${esc(de)}</strong><p>${esc(tr)}</p></div><button class="icon-btn" type="button" data-action="example" data-value="${unit.id}|${i}" aria-label="Cümleyi dinle">${icon('volume_up')}</button></div>`).join('')}</div>
+          <div class="actions">${progress.done.includes('lesson')?pill('Ders notu çalışıldı','check'):button('Dersi tamamla ve devam et','unit-lesson-done',unit.id,'check')}</div>
+        </section>
+        <section class="card" id="unit-videos" tabindex="-1" aria-labelledby="unit-video-title">
+          <div class="section-head"><div><h2 id="unit-video-title">Videoyla pekiştir</h2><p>Deutsche Welle · Nicos Weg A1</p></div></div>
+          <div class="list">${videos.map(video=>`<a class="list-item unit-video" href="${video.url}" target="_blank" rel="noopener noreferrer">
+            ${tile('play_arrow','listening')}<span class="grow"><strong lang="de">${esc(video.title)}</strong><p>${esc(video.focus)}</p></span>${icon('arrow_forward')}</a>`).join('')}</div>
+        </section>
+        ${sourceRefs.length?`<section class="card"><h2>Kitapta bu ünite</h2><div class="source-pages">${sourceRefs.map(({source,ref})=>`<button type="button" data-action="source-page" data-value="${source.id}|${ref.page}">${esc(source.title)} · s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></section>`:''}
+      </div>
+      <div class="stack unit-steps">
+        <section class="card" id="unit-steps" tabindex="-1"><div class="section-head"><div><h2>Çalışma sırası</h2><p>Bir adımı aç veya sıradaki çalışmayla devam et.</p></div></div>${unitStepRows(unit,progress)}</section>
+        <details class="card unit-more"><summary>Tüm ünite alıştırmaları</summary>
+          <div class="quick-list">${['words','grammar',...examSkills].map(skill=>quick(skill,unit.id)).join('')}</div>
+        </details>
       </div>
     </div>`;
 }
+function currentTopic(){return route[1]==='konu'&&lessonById.has(route[2])?route[2]:'';}
 function searchWords(){
   const normalized=value=>value.toLocaleLowerCase('tr').normalize('NFD').replace(/\p{Diacritic}/gu,'').replaceAll('ı','i').replaceAll('ß','ss');
   const query=normalized(wordQuery.trim());
-  return words.filter(w=>(!wordTopic||w.topic===wordTopic)&&(!query||normalized(w.de+' '+w.tr).includes(query)));
+  const topic=currentTopic()||wordTopic;
+  return words.filter(w=>(!topic||w.topic===topic)&&(!query||normalized(w.de+' '+w.tr).includes(query)));
 }
 function wordList(){
   const found=searchWords();
@@ -209,38 +298,46 @@ function wordList(){
     ${found.length>wordLimit?`<div class="actions">${button('Daha fazla göster','more-words','','','secondary')}</div>`:''}`;
 }
 function wordsView(){
-  const due=dueCards(state,words).length;
-  return intro('Kelime kartları',`${words.length} Almanca kelime ve kalıp. Türkçe karşılığına bak, telaffuzu dinle ve kendini dene.`)+tabs('words')+
+  const topic=currentTopic();
+  const set=topic?words.filter(w=>w.topic===topic):words;
+  const due=dueCards(state,set).length;
+  return (topic?link(lessonById.get(topic).title,unitUrl(topic),'arrow_back','ghost slim'):'')+intro('Kelime kartları',`${set.length} Almanca kelime ve kalıp. Türkçe karşılığına bak, telaffuzu dinle ve kendini dene.`)+(topic?'':tabs('words'))+
     `<section class="card">
       <div class="row wrap between"><div class="row wrap">
         <label class="search">${icon('search')}<input type="search" id="word-query" aria-label="Almanca veya Türkçe kelime ara" placeholder="Almanca veya Türkçe ara" value="${esc(wordQuery)}"></label>
-        <label class="field"><select id="word-topic" aria-label="Konu seç">${option('','Tüm konular',!wordTopic)}${lessons.map(l=>option(l.id,l.title,wordTopic===l.id)).join('')}</select></label>
-      </div><div class="row wrap">${due?button(`${due} kartı tekrarla`,'cards','due','refresh','secondary'):''}${button('Kartları çalış','cards',wordTopic||'new','play_arrow')}</div></div>
+        ${topic?'':`<label class="field"><select id="word-topic" aria-label="Konu seç">${option('','Tüm konular',!wordTopic)}${lessons.map(l=>option(l.id,l.title,wordTopic===l.id)).join('')}</select></label>`}
+      </div><div class="row wrap">${due?button(`${due} kartı tekrarla`,'cards',topic?'due|'+topic:'due','refresh','secondary'):''}${button('Kartları çalış','cards',topic||wordTopic||'new','play_arrow')}</div></div>
       <div class="actions">${button('Almanca → Türkçe','word-test','de-tr','','secondary slim')}${button('Türkçe → Almanca','word-test','tr-de','','secondary slim')}${button('Artikel testi','word-test','artikel','','secondary slim')}</div>
       <div id="word-results" class="meta-list">${wordList()}</div>
     </section>`;
 }
 function skillView(key){
   const s=skills[key];
-  const available=tasks.filter(t=>t.skill===key);
+  const topic=currentTopic();
+  const available=tasks.filter(t=>t.skill===key&&(!topic||t.topic===topic));
   const completed=lastAttempts(state);
   const types={choice:'Çoktan seçmeli',form:key==='grammar'?'Boşluk doldurma':key==='listening'?'Dikte':'Form',match:'Eşleştirme',order:'Sıralama',writing:'Mektup',speaking:'Konuşma kartı'};
   const listed=available.filter(t=>(!taskTopic||t.topic===taskTopic)&&(!taskType||t.kind===taskType));
-  return intro(s.name,s.description,pill(s.german))+tabs(key)+
+  return (topic?link(lessonById.get(topic).title,unitUrl(topic),'arrow_back','ghost slim'):'')+intro(s.name,s.description,pill(s.german))+(topic?'':tabs(key))+
     `<section class="card">${head('Alıştırmalar',button('Önerilen seti çöz','skill-quiz',key,'play_arrow'),`${listed.length} görev`)}
-      <div class="row wrap filters"><label class="field"><select id="task-topic" aria-label="Alıştırma konusu">${option('','Tüm konular',!taskTopic)}${lessons.filter(l=>available.some(t=>t.topic===l.id)).map(l=>option(l.id,l.title,taskTopic===l.id)).join('')}</select></label>
+      <div class="row wrap filters">${topic?'':`<label class="field"><select id="task-topic" aria-label="Alıştırma konusu">${option('','Tüm konular',!taskTopic)}${lessons.filter(l=>available.some(t=>t.topic===l.id)).map(l=>option(l.id,l.title,taskTopic===l.id)).join('')}</select></label>`}
       <label class="field"><select id="task-type" aria-label="Alıştırma türü">${option('','Tüm türler',!taskType)}${[...new Set(available.map(t=>t.kind))].map(kind=>option(kind,types[kind],taskType===kind)).join('')}</select></label></div>
-      <div class="list">${listed.slice(0,taskLimit).map(t=>`<button type="button" class="list-item" data-action="one-task" data-value="${esc(t.id)}">${tile(s.icon,key)}<span class="grow"><strong>${esc(t.stem)}</strong><p>${esc(lessonById.get(t.topic)?.title||s.name)}${t.source?' · Kaynak paketi':''} · ${types[t.kind]}</p></span>${completed.has(t.id)?pill(completed.get(t.id).self?'Pratik yapıldı':pct(completed.get(t.id).score),'check'):''}<span class="mi arrow" aria-hidden="true">chevron_right</span></button>`).join('')}</div>
+      <div class="list">${!listed.length?'<p class="empty">Bu filtreye uyan alıştırma yok.</p>':''}${listed.slice(0,taskLimit).map(t=>`<button type="button" class="list-item" data-action="one-task" data-value="${esc(t.id)}">${tile(s.icon,key)}<span class="grow"><strong>${esc(t.stem)}</strong><p>${esc(lessonById.get(t.topic)?.title||s.name)}${t.source?' · Kaynak paketi':''} · ${types[t.kind]}</p></span>${completed.has(t.id)?pill(completed.get(t.id).self?'Pratik yapıldı':pct(completed.get(t.id).score),'check'):''}<span class="mi arrow" aria-hidden="true">chevron_right</span></button>`).join('')}</div>
       ${listed.length>taskLimit?`<div class="actions">${button('Daha fazla göster','more-tasks','','','secondary')}</div>`:''}
     </section>`;
 }
 function learn(){
-  const [,tab,topic]=route;
-  if(tab==='konu'&&lessonById.has(topic))return lessonView(lessonById.get(topic));
+  const [,tab,topic,skill]=route;
+  if(tab==='konu'&&lessonById.has(topic)){
+    if(skill==='words')return wordsView();
+    if(skillById(skill))return skillView(skill);
+    return unitView(lessonById.get(topic));
+  }
   if(tab==='words')return wordsView();
   if(skillById(tab))return skillView(tab);
-  return intro('Çalış', 'A1 konularında adım adım ilerle veya doğrudan bir sınav becerisine geç.')+tabs('')+
-    `<div class="modules">${lessons.map(topicCard).join('')}</div>`;
+  if(tab==='pratik')return intro('Alıştırma arşivi','Bir beceri seçerek ünitelerdeki tüm alıştırmalara ulaş.',link('Ünitelere dön','#calis','arrow_back','secondary'))+
+    `<div class="quick-list">${[...examSkills,'words','grammar'].map(skill=>quick(skill)).join('')}</div>`;
+  return courseView(tab==='asama'?Number(topic)-1:undefined);
 }
 function exam(){
   const parts=examSets[selectedExam];
@@ -310,7 +407,7 @@ function plan(){
             title=focus.title||lessonById.get(focus.topic)?.title||skills[focus.skill]?.name||title;
             action=focus.type==='skill'?link('Çalış','#calis/'+focus.skill,'','secondary slim'):suggestionLink(focus,'Başla');
           }
-          return `<div class="list-item plan-day ${day.key===stats.today?'today':''}"><time datetime="${day.key}">${fmt(day.date,{day:'numeric',month:'short'})}<br><span class="muted">${fmt(day.date,{weekday:'short'})}</span></time><div><strong>${esc(title)}</strong><p>${minutes?`${minutes} dk tamamlandı`:day.scheduled&&!day.past?`${state.settings.daily} dk hedef`:''}</p></div>${action}</div>`;
+          return `<div class="list-item plan-day ${day.key===stats.today?'today':''}"><time datetime="${day.key}">${fmt(day.date,{day:'numeric',month:'short'})}<br><span class="muted">${fmt(day.date,{weekday:'short'})}</span></time><div><strong>${esc(title)}</strong><p>${minutes?`${minutes} dk tamamlandı`:day.action?.step?esc(stepById(day.action.step).title):day.scheduled&&!day.past?`${state.settings.daily} dk hedef`:''}</p></div>${action}</div>`;
         }).join('')}</div>
       </section>
       <section class="card">${head('Aylık odak',pill(fmt(new Date(),{month:'long'})))}
@@ -367,7 +464,7 @@ function render(){
     const current=el.dataset.route===active;el.classList.toggle('active',current);
     if(current)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');
   });
-  document.querySelector('#breadcrumb').textContent=page==='calis'&&route.length>1?'Çalışma alanı':page==='oturum'?'Çalışma oturumu':'';
+  document.querySelector('#breadcrumb').textContent=page==='calis'&&route.length>1?'Almanca A1':page==='oturum'?'Çalışma oturumu':'';
   const now=new Date();
   const date=document.querySelector('#today-date');
   date.dateTime=localKey(now);date.textContent=fmt(now,{day:'numeric',month:'long',weekday:'long'});
@@ -384,9 +481,44 @@ function currentPriority(candidates){
     return weight(a)-weight(b)||(latest.get(a.id)?.at||0)-(latest.get(b.id)?.at||0);
   });
 }
-function mixedTopic(topic){
-  const group=tasks.filter(t=>t.topic===topic);
-  return ['grammar','listening','reading','writing','speaking'].flatMap(skill=>currentPriority(group.filter(t=>t.skill===skill)).slice(0,skill==='grammar'?2:1));
+function unitQuiz(topic,step){
+  const candidates=tasks.filter(task=>task.topic===topic);
+  const prefer=skill=>currentPriority(candidates.filter(t=>t.skill===skill));
+  const original=skill=>currentPriority(candidates.filter(t=>t.skill===skill&&t.id.startsWith('unit-')));
+  if(step==='check')return [...prefer('words').slice(0,2),...prefer('grammar').slice(0,1),...prefer('listening').slice(0,1),...prefer('reading').slice(0,1)];
+  if(step==='writing'){
+    const letter=original('writing').find(t=>t.kind==='writing');
+    const form=prefer('writing').find(t=>t.kind==='form');
+    return [form,letter].filter(Boolean);
+  }
+  if(step==='grammar'){
+    const core=original(step)[0];
+    const extra=prefer(step).find(t=>t!==core);
+    return [core,extra].filter(Boolean);
+  }
+  const core=original(step);
+  return core.length?core:prefer(step).slice(0,3);
+}
+function jumpToUnitSection(id){
+  const section=document.getElementById(id);
+  section?.scrollIntoView({block:'start'});
+  section?.focus({preventScroll:true});
+}
+function startUnitStep(key){
+  const [topic,step]=key.split('|');
+  const unit=lessonById.get(topic);
+  const definition=stepById(step);
+  if(!unit||!definition)return;
+  if(!state.lessons[topic]&&state.unitFocus?.topic!==topic){state.unitFocus={topic,at:Date.now()};persist();}
+  const returnRoute=unitUrl(topic).slice(1);
+  if(step==='lesson'){
+    if(route.join('/')!==returnRoute){to(returnRoute);return;}
+    jumpToUnitSection('unit-lesson');
+    return;
+  }
+  const options={topic,unitStep:step,returnRoute};
+  if(step==='words'){startCards(topic,options);return;}
+  startQuiz(unitQuiz(topic,step),unit.title+' · '+definition.title,options);
 }
 function startQuiz(list,title,options={}){
   if(!list.length){notify('Bu seçimde çalışılacak görev yok.');return;}
@@ -400,11 +532,14 @@ function startExam(key){
   const title=key==='written'?'Yazılı sınav provası':skills[key].name+' provası';
   startQuiz(parts.flatMap(p=>p.tasks),title,{exam:key,examSet:selectedExam+1,parts,returnRoute:'deneme'});
 }
-function startCards(key){
+function startCards(key,options={}){
+  const [kind,topic]=key.split('|');
   const due=dueCards(state,words);
-  const available=key==='due'?due:key==='new'?[...due,...words.filter(w=>!state.cards[w.id])]:words.filter(w=>w.topic===key).sort((a,b)=>(state.cards[a.id]?.due||0)-(state.cards[b.id]?.due||0));
+  const available=kind==='due'?due.filter(w=>!topic||w.topic===topic):kind==='new'?[...due,...words.filter(w=>!state.cards[w.id])]:
+    words.filter(w=>w.topic===kind).sort((a,b)=>(state.cards[a.id]?.due||0)-(state.cards[b.id]?.due||0));
   if(!available.length){notify('Şimdilik tekrarı gelen kart yok.');return;}
-  session.cards(available.slice(0,12),key==='due'?'Kelime tekrarı':'Kelime kartları',route.join('/'));
+  const title=kind==='due'?'Kelime tekrarı':options.topic?lessonById.get(options.topic).title+' · Kelime kartları':'Kelime kartları';
+  session.cards(available.slice(0,options.unitStep?8:12),title,options.returnRoute||route.join('/'),options);
   to('oturum');
 }
 function chooseFile(accept,onFile){
@@ -497,8 +632,9 @@ async function showOfflineStatus(){
 }
 const session=createSession({main,state,persist,to,notify,play,stopSpeech,saveRecording,
   findSource:sourceById,openPdf,topicName:key=>lessonById.get(key)?.title||'A1',
-  onComplete:(record,topic)=>{
-    if(topic&&record.completed)state.lessons[topic]=record.at;
+  unitResultAction,
+  onComplete:(record,topic,step)=>{
+    if(topic&&step&&record.completed)markUnitStep(state,topic,step,record.at);
     const index=state.sessions.findIndex(item=>item.id===record.id);
     if(index<0)state.sessions.push(record);else state.sessions[index]=record;
     persist();
@@ -517,14 +653,26 @@ document.addEventListener('click',event=>{
     if(select)select.value=state.settings.theme;
     return;
   }
+  if(action==='unit-jump'){jumpToUnitSection(key);return;}
+  if(action==='unit-step'){startUnitStep(key);return;}
+  if(action==='unit-lesson-done'){
+    const unit=lessonById.get(key);
+    if(!unit||unitProgress(state,key).done.includes('lesson'))return;
+    const at=Date.now();
+    markUnitStep(state,key,'lesson',at);
+    if(!state.lessons[key])state.unitFocus={topic:key,at};
+    state.sessions.push({id:id(),at,title:unit.title+' · Ders notu',minutes:Math.max(1,Math.min(120,Math.round((at-viewStarted)/60000))),completed:true});
+    persist();
+    const step=unitProgress(state,key).next;
+    if(step)startUnitStep(key+'|'+step.id);else render();
+    return;
+  }
   if(action==='cards'){startCards(key);return;}
   if(action==='exam'){startExam(key);return;}
   if(action==='one-task'){const task=tasks.find(q=>q.id===key);if(task)startQuiz([task],skills[task.skill].name);return;}
-  if(action==='skill-quiz'){const group=tasks.filter(t=>t.skill===key&&(!taskTopic||t.topic===taskTopic)&&(!taskType||t.kind===taskType));startQuiz(currentPriority(group).slice(0,key==='speaking'||key==='writing'?3:8),skills[key].name);return;}
-  if(action==='word-test'){startQuiz(currentPriority(tasks.filter(t=>t.skill==='words'&&t.subtype===key&&(!wordTopic||t.topic===wordTopic))).slice(0,12),'Kelime testi');return;}
+  if(action==='skill-quiz'){const topic=currentTopic()||taskTopic;const group=tasks.filter(t=>t.skill===key&&(!topic||t.topic===topic)&&(!taskType||t.kind===taskType));startQuiz(currentPriority(group).slice(0,key==='speaking'||key==='writing'?3:8),skills[key].name);return;}
+  if(action==='word-test'){startQuiz(currentPriority(tasks.filter(t=>t.skill==='words'&&t.subtype===key&&(!(currentTopic()||wordTopic)||t.topic===(currentTopic()||wordTopic)))).slice(0,12),'Kelime testi');return;}
   if(action==='diagnostic'){startQuiz(['grammar','listening','reading','words'].flatMap(skill=>currentPriority(tasks.filter(t=>t.skill===skill)).slice(0,3)),'Başlangıç yoklaması');return;}
-  if(action==='topic-quiz'){startQuiz(mixedTopic(key),lessonById.get(key).title,{topic:key});return;}
-  if(action==='topic-skill'){const [topic,skill]=key.split('|');startQuiz(currentPriority(tasks.filter(t=>t.topic===topic&&t.skill===skill)).slice(0,8),lessonById.get(topic).title+' · '+skills[skill].name);return;}
   if(action==='mistakes'){startQuiz(mistakes(state,tasks).slice(0,12).map(item=>item.task),'Yanlış tekrarı');return;}
   if(action==='speak-word'){const word=words.find(w=>w.id===key);if(word)play(word.de,word.audio);return;}
   if(action==='example'){const [topic,i]=key.split('|');const example=lessonById.get(topic)?.examples[i];if(example)play(example[0],`./assets/audio/example-${topic}-${i}.mp3`);return;}

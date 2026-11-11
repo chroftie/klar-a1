@@ -255,6 +255,82 @@ der Herbst|sonbahar
 der Winter|kış
 die Verabredung|buluşma, randevulaşma
 absagen|iptal etmek|Ich muss leider absagen.|Maalesef iptal etmem gerekiyor.
+# sayilar
+die Zahl|sayı
+die Nummer|numara
+die Ziffer|rakam
+die Hausnummer|bina numarası
+der Kontakt|iletişim, kişi bağlantısı
+die E-Mail-Adresse|e-posta adresi
+die Vorwahl|telefon alan kodu
+die Mobilnummer|cep telefonu numarası
+null|sıfır
+elf|on bir
+zwölf|on iki
+siebzehn|on yedi
+zwanzig|yirmi
+vierundzwanzig|yirmi dört
+dreißig|otuz
+fünfzig|elli
+hundert|yüz
+noch einmal|bir kez daha|Bitte sagen Sie die Nummer noch einmal.|Lütfen numarayı bir kez daha söyleyin.
+# hobiler
+spazieren gehen|yürüyüşe çıkmak|Wir gehen im Park spazieren.|Parkta yürüyüşe çıkıyoruz.
+die Gitarre|gitar
+das Klavier|piyano
+das Konzert|konser
+das Theater|tiyatro
+das Schwimmbad|yüzme havuzu
+das Spiel|oyun
+der Verein|dernek, kulüp
+die Mannschaft|takım
+die Laufgruppe|koşu grubu
+tanzen|dans etmek
+wandern|doğa yürüyüşü yapmak
+joggen|koşu yapmak
+Schach spielen|satranç oynamak
+Musik hören|müzik dinlemek
+Rad fahren|bisiklete binmek
+gern|severek|Ich lese gern.|Okumayı severim.
+zusammen|birlikte|Wollen wir zusammen spielen?|Birlikte oynayalım mı?
+# hizmet
+das Bürgerbüro|belediye vatandaşlık işleri bürosu
+das Amt|resmî daire
+die Post|posta, postane
+das Paket|paket, koli
+der Brief|mektup
+die Briefmarke|posta pulu
+der Ausweis|kimlik belgesi
+der Reisepass|pasaport
+das Dokument|belge
+die Kopie|kopya
+das Feld|alan, kutucuk
+die Unterschrift|imza
+unterschreiben|imzalamak|Wo muss ich unterschreiben?|Nereye imza atmam gerekiyor?
+schicken|göndermek|Ich möchte einen Brief schicken.|Bir mektup göndermek istiyorum.
+abholen|teslim almak, gidip almak
+die Gebühr|ücret, harç
+die Öffnungszeit|çalışma saati
+der Empfänger|alıcı
+# kurallar
+die Regel|kural
+das Schild|tabela
+das Verbot|yasak
+die Erlaubnis|izin
+verboten|yasak|Rauchen ist hier verboten.|Burada sigara içmek yasak.
+erlaubt|izin verilen, serbest|Fotos sind erlaubt.|Fotoğraf çekmek serbest.
+dürfen|izinli olmak, yapabilmek
+rauchen|sigara içmek
+fotografieren|fotoğraf çekmek
+telefonieren|telefonla konuşmak
+öffnen|açmak
+schließen|kapatmak
+ausschalten|kapatmak, devre dışı bırakmak
+einschalten|açmak, çalıştırmak
+leise|sessiz, alçak sesle
+laut|yüksek sesle
+draußen|dışarıda
+der Blitz|flaş
 `;
 
 let topic, index=0;

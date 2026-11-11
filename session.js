@@ -3,7 +3,7 @@ import {gradeTask,formMatches,weightedSelf,id,reviewCard} from './study.js';
 import {esc,icon,button,link,pill,track,pct,head} from './ui.js';
 
 export function createSession(deps){
-  const {main,state,persist,to,notify,play,stopSpeech,saveRecording,findSource,openPdf,topicName,onComplete}=deps;
+  const {main,state,persist,to,notify,play,stopSpeech,saveRecording,findSource,openPdf,topicName,onComplete,unitResultAction}=deps;
   let current=null,clock,recorder,microphoneRequest,recordingUrls=[];
   const currentTask=()=>current?.items[current.index];
   const focusCard=()=>requestAnimationFrame(()=>main.querySelector('.study-card h2')?.focus({preventScroll:true}));
@@ -31,8 +31,8 @@ export function createSession(deps){
       current.deadline=Date.now()+currentPart().minutes*60000;
     }
   }
-  function cards(items,title,returnRoute){
-    fresh(items,title,returnRoute,{type:'cards',reviewed:0});
+  function cards(items,title,returnRoute,options={}){
+    fresh(items,title,returnRoute,{type:'cards',reviewed:0,...options});
   }
   function pauseTime(){
     if(!current||!current.activeAt)return;
@@ -116,7 +116,7 @@ export function createSession(deps){
 
   function logActivity(completed){
     const minutes=Math.max(1,Math.min(120,Math.round(current.elapsed/60000)));
-    onComplete({id:current.activityId,title:current.title,at:current.finishedAt||Date.now(),minutes,completed},current.topic);
+    onComplete({id:current.activityId,title:current.title,at:current.finishedAt||Date.now(),minutes,completed},current.topic,current.unitStep);
   }
   function checkpoint(){
     if(current&&!current.completed&&!current.exam&&(current.results.size||current.reviewed))logActivity(false);
@@ -242,10 +242,10 @@ export function createSession(deps){
     const review=current.type==='quiz'?(current.exam?current.items:current.items.filter(task=>current.results.has(task.id))):[];
     return `<div class="study-frame"><section class="card study-card tint">
       ${pill(current.title,'check_circle')}
-      <h2 tabindex="-1">${current.exam?'Deneme sonucu':'Çalışma tamamlandı'}</h2>
+      <h2 tabindex="-1">${current.exam?'Deneme sonucu':current.unitStep==='check'&&state.lessons[current.topic]?'Ünite tamamlandı':'Çalışma tamamlandı'}</h2>
       <p>${esc(metric)}</p>
       ${current.exam?'<p class="footer-note">Bu puan bir çalışma göstergesidir. Yazma ve konuşma puanına kendi değerlendirmen eklenir.</p>':''}
-      <div class="actions">${link('Bugün’e dön','#bugun','home')}${link('İlerlememi gör','#ilerleme','bar_chart','secondary')}</div>
+      <div class="actions">${current.unitStep?unitResultAction(current.topic):link('Bugün’e dön','#bugun','home')}${current.unitStep?link('Üniteye dön',current.returnRoute.startsWith('#')?current.returnRoute:'#'+current.returnRoute,'arrow_back','secondary'):link('İlerlememi gör','#ilerleme','bar_chart','secondary')}</div>
     </section>${review.length?`<section class="card">${head('Cevaplarını incele')}<div class="list">${review.map(reviewLine).join('')}</div></section>`:''}</div>`;
   }
   function render(){

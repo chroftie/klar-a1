@@ -1,16 +1,16 @@
 const CACHE_PREFIX='klar-a1-';
-const CACHE_NAME=CACHE_PREFIX+'20261111-2';
+const CACHE_NAME=CACHE_PREFIX+'20261111-3';
 const CORE=[
-  './','./index.html','./styles.css','./theme.js','./app.js','./session.js','./study.js','./device.js','./ui.js',
-  './data/course.js','./data/words.js','./data/tasks.js','./data/extra.js','./data/vocab-quiz.js','./data/drills.js',
+  './','./index.html','./styles.css','./theme.js','./app.js','./session.js','./study.js','./course-progress.js','./device.js','./ui.js',
+  './data/course.js','./data/words.js','./data/tasks.js','./data/extra.js','./data/vocab-quiz.js','./data/drills.js','./data/videos.js','./data/unit-tasks.js',
   './manifest.webmanifest','./assets/fonts.css','./assets/bricolage.woff2','./assets/bricolage-ext.woff2',
   './assets/dm-sans.woff2','./assets/dm-sans-ext.woff2','./assets/icons.woff2','./assets/berlin.webp',
   './assets/icon-180.png','./assets/icon-192.png','./assets/icon-512.png',
 ];
-const topics=['tanisma','aile','kurs','alisveris','saat','ev','ulasim','is','saglik','gecmis','giyim','davet'];
+const topics=['tanisma','aile','kurs','alisveris','saat','ev','ulasim','is','saglik','gecmis','giyim','davet','sayilar','hobiler','hizmet','kurallar'];
 const countPaths=(name,count)=>Array.from({length:count},(_,i)=>`./assets/audio/${name}-${i+1}.mp3`);
-const audio=[...countPaths('listen',24),...countPaths('listen-b',15),...countPaths('word',244),...countPaths('dictation',12),
-  ...topics.flatMap(topic=>[0,1,2].map(i=>`./assets/audio/example-${topic}-${i}.mp3`))];
+const audio=[...countPaths('listen',24),...countPaths('listen-b',15),...countPaths('word',316),...countPaths('dictation',12),
+  ...topics.flatMap(topic=>[`./assets/audio/unit-${topic}.mp3`,...[0,1,2].map(i=>`./assets/audio/example-${topic}-${i}.mp3`)])];
 
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{

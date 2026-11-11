@@ -7,10 +7,12 @@ Klar, Türkçe destekli Almanca A1 ve Goethe Start Deutsch 1 çalışma uygulama
 1. Uygulamayı tarayıcıda aç.
 2. **Kaynaklar → Paket yükle** ile kişisel Klar JSON paketini ekle. Bu adımı kullanacağın her cihazda yap.
 3. **Ayarlar** bölümünde çalışma günlerini, günlük süreyi, seviyeni ve varsa sınav tarihini seç.
-4. **Bugün** bölümünden önerilen çalışmaya başla. **Çalış** bölümünde konu ve görev türüne göre filtreleyebilirsin.
+4. **Bugün** bölümünden sıradaki adıma devam et. **Üniteler** bölümünde 16 ders, sesli örnekler, beceri alıştırmaları ve ünite kontrolleri var. Daha fazla pratik için **Alıştırma arşivi** bölümünü aç.
 5. **Ayarlar → Yedeği indir** ile ilerlemeni dosyaya al. Başka bir tarayıcıda **Yedek yükle** ile birleştir.
 
 iPhone ve iPad’de Safari’de **Paylaş → Ana Ekrana Ekle** ile Klar’ı uygulama gibi açabilirsin. Mac ve Windows’ta bağlantıyı açman yeterli. İlk bağlantıda uygulama, alıştırmalar ve temel ses dosyaları çevrimdışı kullanım için hazırlanır.
+
+Ünitelerdeki [Deutsche Welle Nicos Weg videoları](https://www.youtube.com/playlist?list=PLs7zUO7VPyJ5DV1iBRgSw2uDl832n0bLg) yeni sekmede açılır ve internet bağlantısıyla izlenir.
 
 Tarayıcı çalışma verisini yerel olarak saklar. Kişisel PDF’leri **Kaynaklar** bölümünde tek tek bağlayabilirsin. PDF’ler ve ses kayıtları ayrı olarak cihazda tutulur. Kayıtları **Ayarlar → Konuşma kayıtları** bölümünden indirebilirsin. Yazma ve konuşmada model yanıt ve öz değerlendirme bulunur. Deneme puanları çalışma takibi içindir.
 

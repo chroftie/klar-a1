@@ -1,9 +1,10 @@
 import { lessons } from './data/course.js';
+import {activeUnit,courseSteps,normalizeCourseProgress,mergeCourseProgress,unitProgress} from './course-progress.js';
 
 const stateKey='klar-study-v1';
 export const defaults={daily:20, days:[1,2,3,4,5], examDate:'', level:'new', theme:'system'};
 export function emptyState(){
-  return {createdAt:Date.now(),settings:{...defaults,days:[...defaults.days]},attempts:[],sessions:[],cards:{},lessons:{},exams:[]};
+  return {createdAt:Date.now(),settings:{...defaults,days:[...defaults.days]},attempts:[],sessions:[],cards:{},lessons:{},unitSteps:{},unitFocus:null,exams:[]};
 }
 export function loadState(){
   try {return normalizeState(JSON.parse(localStorage.getItem(stateKey)));}
@@ -38,6 +39,13 @@ export function normalizeState(raw){
     if(key.startsWith('word-')&&value&&Number.isFinite(value.due)&&Number.isFinite(value.at)&&Number.isInteger(value.stage)&&value.stage>=0&&value.stage<=6)base.cards[key]=value;
   }
   for(const lesson of lessons)if(Number.isFinite(raw.lessons?.[lesson.id]))base.lessons[lesson.id]=raw.lessons[lesson.id];
+  base.unitSteps=normalizeCourseProgress(raw.unitSteps);
+  const focus=raw.unitFocus;
+  if(focus&&lessons.some(unit=>unit.id===focus.topic)&&Number.isFinite(focus.at)&&focus.at>0)base.unitFocus={topic:focus.topic,at:focus.at};
+  for(const lesson of lessons){
+    const steps=base.unitSteps[lesson.id];
+    if(steps&&courseSteps.every(step=>steps[step.id]))base.lessons[lesson.id]??=Math.max(...Object.values(steps));
+  }
   return base;
 }
 export function mergeState(current,backup){
@@ -45,7 +53,14 @@ export function mergeState(current,backup){
   const mergeList=(a,b)=>[...new Map([...a,...b].map(item=>[item.id,item])).values()].sort((x,y)=>x.at-y.at);
   const cards={...current.cards};
   for(const [key,card] of Object.entries(restored.cards))if(!cards[key]||card.at>=cards[key].at)cards[key]=card;
-  return {...restored,createdAt:Math.min(current.createdAt,restored.createdAt),cards,lessons:{...current.lessons,...restored.lessons},
+  const unitSteps=mergeCourseProgress(current.unitSteps,restored.unitSteps);
+  const completed={...current.lessons,...restored.lessons};
+  for(const lesson of lessons){
+    const steps=unitSteps[lesson.id];
+    if(steps&&courseSteps.every(step=>steps[step.id]))completed[lesson.id]??=Math.max(...Object.values(steps));
+  }
+  const unitFocus=(current.unitFocus?.at||0)>(restored.unitFocus?.at||0)?current.unitFocus:restored.unitFocus;
+  return {...restored,unitSteps,unitFocus,createdAt:Math.min(current.createdAt,restored.createdAt),cards,lessons:completed,
     attempts:mergeList(current.attempts,restored.attempts),
     sessions:mergeList(current.sessions,restored.sessions),
     exams:mergeList(current.exams,restored.exams)};
@@ -119,34 +134,42 @@ export function recommendation(state,tasks,words){
   const due=dueCards(state,words);
   const wrong=mistakes(state,tasks);
   const remaining=examDistance(state.settings);
-  const lesson=lessons.find(l=>!state.lessons[l.id])||lessons[0];
+  const lesson=activeUnit(state);
   if(due.length>=3) return {type:'cards',title:'Kelime tekrarı',description:`${due.length} kartın tekrar zamanı geldi. Önce bu kelimeleri hatırlamayı dene.`,icon:'refresh'};
   if(wrong.length>=2) return {type:'mistakes',title:'Yanlışlarına dön',description:`${wrong.length} soru yeniden çözülebilir. Son denemendeki hatalarla başla.`,icon:'bolt'};
-  if(remaining!==null&&remaining>=0&&remaining<=7 || state.settings.level==='exam'){
+  if(remaining!==null&&remaining>=0&&remaining<=7 || state.settings.level==='exam' || !lesson){
     const skills=['listening','reading','writing','speaking'];
     const skill=skills.find(s=>!state.exams.some(e=>e.skill===s))||skills.sort((a,b)=>(skillStats(state,a).accuracy??1)-(skillStats(state,b).accuracy??1))[0];
     return {type:'exam',skill,title:'Sınav provası',description:'Süre tutarak bir Goethe A1 bölümü çöz, ardından cevaplarını gözden geçir.',icon:'event'};
   }
   if(state.settings.level==='some'&&!state.attempts.some(a=>!a.self))return {type:'diagnostic',title:'Seviyeni yokla',description:'Karışık bir başlangıç seti çöz. Sonraki öneriler cevaplarına göre şekillenecek.',icon:'target'};
-  return {type:'lesson',topic:lesson.id,title:lesson.title,description:lesson.description,icon:'route'};
+  const next=unitProgress(state,lesson.id).next;
+  return {type:'lesson',topic:lesson.id,step:next.id,title:lesson.title,description:next.hint,icon:next.icon};
 }
 export function weekPlan(state,tasks,words,now=new Date()){
   const today=localKey(now);
   const start=monday(now);
   const focus=recommendation(state,tasks,words);
-  const unused=lessons.filter(l=>!state.lessons[l.id]);
-  const priority=['listening','reading','writing','speaking'];
-  let planned=0, nextUnit=0;
+  const active=activeUnit(state);
+  const remaining=(active?[active,...lessons.filter(unit=>unit!==active&&!state.lessons[unit.id])]:[]).flatMap(unit=>{
+    const progress=unitProgress(state,unit.id);
+    return courseSteps.filter(step=>!progress.done.includes(step.id)).map(step=>({type:'lesson',topic:unit.id,step:step.id}));
+  });
+  const dailySteps=Math.max(1,Math.round(state.settings.daily/6));
+  let cursor=0, scheduledDays=0;
   return Array.from({length:7},(_,i)=>{
     const date=addDays(start,i),key=localKey(date);
     const scheduled=state.settings.days.includes(date.getDay());
     const past=key<today;
-    const lesson=unused[nextUnit%Math.max(unused.length,1)]||lessons[nextUnit%lessons.length];
-    const action=!scheduled||past?null:planned===0?focus:planned%3===2
-      ?{type:'skill',skill:priority[(planned-2)%priority.length]}
-      :{type:'lesson',topic:lesson.id};
-    if(scheduled&&!past)planned++;
-    if(action?.type==='lesson')nextUnit++;
+    let action=null;
+    if(scheduled&&!past){
+      if(scheduledDays===0&&focus.type!=='lesson')action=focus;
+      else{
+        action=remaining[cursor]||{type:'skill',skill:['listening','reading','writing','speaking'][scheduledDays%4]};
+        cursor+=dailySteps;
+      }
+      scheduledDays++;
+    }
     return {date,key,scheduled,past,action};
   });
 }
