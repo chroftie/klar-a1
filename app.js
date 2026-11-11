@@ -15,6 +15,7 @@ import {courseSteps,stepById,activeUnit,unitProgress,markUnitStep} from './cours
 const main=document.querySelector('#content');
 const dialog=document.querySelector('#dialog');
 const status=document.querySelector('#status');
+const privateKlar='https://klar-a1.mauve-daisy-5056.chatgpt.site/';
 const pages=[
   ['bugun','Bugün','home'],['calis','Üniteler','book_2'],['deneme','Deneme','event'],
   ['ilerleme','İlerleme','bar_chart'],['plan','Planım','calendar_month'],
@@ -172,8 +173,7 @@ function home(){
         <p class="footer-note">${due||wrong.length?'Zamanı gelen kartları ve son hatalarını burada çalış.':'İlk çalışmalarından sonra tekrarların burada birikecek.'}</p>
         <div class="actions">${due?button('Kartları tekrarla','cards','due','','secondary slim'):''}${wrong.length?button('Yanlışları çöz','mistakes','','','secondary slim'):''}${!due&&!wrong.length?inline('Kelime kartlarını aç','#calis/words'):''}</div>
       </section>
-      ${pack?`<section class="card"><div class="row">${tile('folder_open')}<div><h3>Kaynak paketin hazır</h3><p class="small muted">${pack.sources.length} kaynak · ${pack.tasks.length} ek görev</p></div></div><div class="actions">${inline('Kaynakları aç','#kaynaklar')}</div></section>`:
-        `<section class="card"><div class="row">${tile('folder_open')}<div><h3>Kendi kaynaklarını ekle</h3><p class="small muted">PDF’lerinden hazırlanan Klar paketini yükle.</p></div></div><div class="actions">${button('Paket yükle','import-pack','','upload','secondary slim')}${inline('Kaynaklar','#kaynaklar')}</div></section>`}
+      <section class="card"><div class="row">${tile('folder_open')}<div><h3>Özel Klar</h3><p class="small muted">Kitapların ve alıştırmaların her cihazda hazır.</p></div></div><div class="actions">${link('Özel Klar’ı aç',privateKlar,'arrow_forward','secondary slim')}${inline('İlerlemeyi taşı','#ayarlar')}</div></section>
     </div></div>`;
 }
 
@@ -266,7 +266,7 @@ function unitBookSection(unit){
   }).join('');
   return `<section class="card" id="unit-books" tabindex="-1" aria-labelledby="unit-book-title">
     <div class="section-head"><div><h2 id="unit-book-title">Kitapta bu ünite</h2><p>Bu konu için çalışacağın sayfalar ve kitaba bağlı alıştırmalar.</p></div></div>
-    ${!pack||!groups?`<div class="book-pack-callout"><p class="small">Kitap bölümlerini ve alıştırmalarını görmek için güncel Klar kaynak paketini yükle.</p>${button(pack?'Paketi güncelle':'Paket yükle','import-pack','','upload','secondary slim')}</div>`:''}
+    ${!groups?`<div class="book-pack-callout"><p class="small">Bu ünitenin kitapları ve alıştırmaları özel Klar’da hazır.</p>${link('Özel Klar’da aç',privateKlar+unitUrl(unit.id),'arrow_forward','secondary slim')}</div>`:''}
     ${groups}
     ${extra.length?`<details class="book-group"><summary>Ek kaynaklar</summary><div class="source-pages">${extra.map(({source,ref})=>`<button type="button" data-action="source-page" data-value="${esc(source.id+'|'+ref.page)}">${esc(source.title)} · PDF s. ${ref.page} · ${esc(ref.label)}</button>`).join('')}</div></details>`:''}
   </section>`;
@@ -499,10 +499,9 @@ function plan(){
     </div></div>`;
 }
 function sources(){
-  return intro('Kaynaklar','Kendi PDF’lerine dön, kişisel çalışma paketini yükle veya ücretsiz resmî örnekleri aç.')+
+  return intro('Kaynaklar','Kitaplarını özel Klar’da aç veya ücretsiz resmî örneklere göz at.')+
     `<div class="stack">
-      <section class="card tint"><div class="row wrap between"><div><h2>Kişisel çalışma paketi</h2><p>${pack?`${pack.sources.length} kaynak, ${pack.tasks.length} görev ve ${pack.words.length} ek kart cihazında.`:'Klar kaynak paketi dosyasını bu cihaza ekle.'}</p>
-      <p class="small muted">${pack?.revision>=2?'Kitap bölümlerini ve alıştırmaları Üniteler bölümünden açabilirsin.':'Kitap bölümleri ve yeni alıştırmalar için güncel paketi seç.'}</p></div>${button(pack?'Paketi güncelle':'Paket yükle','import-pack','','upload')}</div></section>
+      <section class="card tint"><div class="row wrap between"><div><h2>Özel Klar kitaplığı</h2><p>PDF’ler ve kitap alıştırmaları giriş yaptığında açılır.</p></div>${link('Kitaplığı aç',privateKlar+'#kaynaklar','arrow_forward')}</div></section>
       ${pack?`<section>${head('Kütüphanem')}
         <div class="dual">${pack.sources.map(s=>{
           const indexed=s.refs.filter(ref=>ref.id);
@@ -532,6 +531,7 @@ function settings(){
     </form>
     <div class="stack">
       <section class="card"><h2>Görünüm</h2><label class="field theme-field">Tema<select id="theme-setting">${option('system','Sistem temasını izle',theme==='system')}${option('light','Açık',theme==='light')}${option('dark','Koyu',theme==='dark')}</select></label></section>
+      <section class="card tint"><h2>İlerlemeyi özel Klar’a taşı</h2><p class="footer-note">Kodu bu tarayıcıdan kopyala ve özel Klar’da Ayarlar → Eski Klar ilerlemesini al bölümüne yapıştır.</p><div class="actions">${button('İlerleme kodunu kopyala','copy-progress','','','secondary slim')}${link('Özel Klar ayarlarını aç',privateKlar+'#ayarlar','arrow_forward','ghost slim')}</div></section>
       <section class="card"><h2>Yedekleme</h2><p class="footer-note">Yedek dosyası ayarlarını, ilerlemeni ve yüklediğin çalışma paketini taşır. Bağlı PDF’leri diğer cihazda yeniden seçebilirsin.</p><div class="actions">${button('Yedeği indir','backup','','download','secondary')}${button('Yedek yükle','restore','','upload','secondary')}</div></section>
       <section class="card"><h2>Kurulum</h2><p class="footer-note">iPhone ve iPad’de Safari’de Paylaş → Ana Ekrana Ekle. Mac ve Windows’ta tarayıcıdan aynı adresi aç.</p><p class="footer-note" id="offline-info">Çevrimdışı durum kontrol ediliyor…</p><div class="actions">${inline('Kaynaklara git','#kaynaklar')}</div></section>
       <section class="card"><h2>Konuşma kayıtları</h2><p class="footer-note">Bu cihazda kaydettiğin sesleri dinle veya dosya olarak indir.</p><div id="recording-list" class="meta-list"></div></section>
@@ -680,6 +680,18 @@ function downloadBlob(blob,name){
   document.body.append(anchor);anchor.click();anchor.remove();
   setTimeout(()=>URL.revokeObjectURL(url),60000);
 }
+async function copyProgress(){
+  const code=JSON.stringify({kind:'klar-progress',version:1,state});
+  try{
+    await navigator.clipboard.writeText(code);
+    notify('İlerleme kodu kopyalandı.');
+  }catch{
+    dialog.innerHTML=`<h2>İlerleme kodu</h2><p>Seçili metni kopyala ve özel Klar’a yapıştır.</p><label class="field">İlerleme kodu<textarea readonly rows="5">${esc(code)}</textarea></label><div class="actions">${button('Kapat','close-dialog','','','secondary')}</div>`;
+    if(!dialog.open)dialog.showModal();
+    const field=dialog.querySelector('textarea');
+    field.focus();field.select();
+  }
+}
 async function showRecordings(){
   const box=document.querySelector('#recording-list');
   if(!box)return;
@@ -771,6 +783,7 @@ document.addEventListener('click',event=>{
   if(action==='import-pack'){chooseFile('.json,application/json',async file=>{await installPack(await readJson(file));render();notify('Kişisel çalışma paketin yüklendi.');});return;}
   if(action==='bind-pdf'){bindPdf(key);return;}
   if(action==='source-page'){openPdf(key);return;}
+  if(action==='copy-progress'){void copyProgress();return;}
   if(action==='close-dialog'){dialog.close();return;}
   if(action==='listen-record'){openRecording(key);return;}
   if(action==='delete-record'){deleteDevice(key).then(()=>{files.delete(key);dialog.close();showRecordings();notify('Ses kaydı silindi.');}).catch(()=>notify('Ses kaydı silinemedi.'));return;}

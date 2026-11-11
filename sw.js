@@ -1,5 +1,5 @@
 const CACHE_PREFIX='klar-a1-';
-const CACHE_NAME=CACHE_PREFIX+'20261111-4';
+const CACHE_NAME=CACHE_PREFIX+'20261111-5';
 const CORE=[
   './','./index.html','./styles.css','./theme.js','./app.js','./session.js','./study.js','./course-progress.js','./device.js','./ui.js',
   './data/course.js','./data/words.js','./data/tasks.js','./data/extra.js','./data/vocab-quiz.js','./data/drills.js','./data/videos.js','./data/unit-tasks.js',
