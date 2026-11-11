@@ -2,8 +2,8 @@ const listeningText = `
 tanisma|Wie heißt der Mann mit Nachnamen?|Guten Tag, ich bin Daniel Weber. Ich habe heute einen Termin bei Frau Klein.|Klein|Weber|Müller|1|Weber erkeğin soyadı. Frau Klein randevu aldığı kişi.
 aile|Wie alt ist Noras Sohn?|Das ist mein Sohn Leon. Er ist acht Jahre alt. Seine Schwester ist schon elf.|8|11|18|0|Acht sekiz demektir. Elf kız kardeşinin yaşı.
 kurs|In welchem Raum ist der Kurs heute?|Der Deutschkurs ist heute nicht in Raum zwölf. Gehen Sie bitte in Raum zwanzig.|Raum 12|Raum 2|Raum 20|2|Nicht in Raum zwölf, on ikinci odada olmadığını söylüyor.
-alisveris|Was kostet ein Kilo Tomaten?|Was kosten die Tomaten? Heute kostet ein Kilo zwei Euro fünfzig. Normal kostet es drei Euro.|2,15 €|2,50 €|3,00 €|1|Zwei Euro fünfzig, 2,50 avro. Üç avro normal fiyat.
-saat|Um wie viel Uhr treffen sie sich?|Treffen wir uns um halb sieben? Ja, gerne. Um sechs Uhr dreißig bin ich da.|06:30|07:30|07:00|0|Halb sieben, saat 6.30 anlamına gelir.
+alisveris|Was kostet ein Kilo Tomaten?|Was kosten die Tomaten? ~ Heute kostet ein Kilo zwei Euro fünfzig. Normal kostet es drei Euro.|2,15 €|2,50 €|3,00 €|1|Zwei Euro fünfzig, 2,50 avro. Üç avro normal fiyat.
+saat|Um wie viel Uhr treffen sie sich?|Treffen wir uns um halb sieben? ~ Ja, gerne. Um sechs Uhr dreißig bin ich da.|06:30|07:30|07:00|0|Halb sieben, saat 6.30 anlamına gelir.
 ev|Wie viele Zimmer hat die Wohnung?|Die Wohnung ist hell und hat drei Zimmer. Im Haus gibt es leider keinen Aufzug.|2|4|3|2|Hat drei Zimmer, üç odası var.
 ulasim|Der Zug fährt heute von Gleis 6 ab.|Achtung am Bahnhof. Der Zug nach Mainz fährt heute von Gleis sechs ab, nicht von Gleis zwei.|Richtig|Falsch||0|Doğru. Gleis sechs, altıncı peron.
 saglik|Die Praxis ist am Freitag geöffnet.|Guten Tag. Die Praxis am Markt ist von Montag bis Donnerstag geöffnet. Am Freitag bleibt sie geschlossen.|Richtig|Falsch||1|Geschlossen kapalı demektir. Muayenehane cuma kapalı.
@@ -28,9 +28,12 @@ function makeChoice(id,skill,topic,stem,options,answer,explain,extra={}){
   return {id,kind:'choice',skill,topic,stem,options,answer:Number(answer),explain,...extra};
 }
 export const listening = listeningText.trim().split('\n').map((line,i)=>{
-  const [topic,stem,transcript,a,b,c,answer,explain]=line.split('|');
+  const [topic,stem,recording,a,b,c,answer,explain]=line.split('|');
   const id=`listen-${i+1}`;
-  return makeChoice(id,'listening',topic,stem,[a,b,c].filter(Boolean),answer,explain,{transcript,audio:`./assets/audio/${id}.mp3`,plays:i>=6&&i<=9?1:2});
+  const segments=recording.split(' ~ ');
+  return makeChoice(id,'listening',topic,stem,[a,b,c].filter(Boolean),answer,explain,{
+    segments,transcript:segments.join('\n'),audio:`./assets/audio/${id}.mp3`,plays:i>=6&&i<=9?1:2
+  });
 });
 
 const readingText = String.raw`
