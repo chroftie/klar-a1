@@ -25,6 +25,19 @@ const weekdays=[['Pzt',1],['Sal',2],['Çar',3],['Per',4],['Cum',5],['Cmt',6],['P
 const lessonById=new Map(lessons.map(l=>[l.id,l]));
 const skillById=key=>Object.hasOwn(skills,key)?skills[key]:null;
 const state=loadState();
+const systemTheme=matchMedia('(prefers-color-scheme: dark)');
+function applyTheme(){
+  const dark=state.settings.theme==='dark'||(state.settings.theme==='system'&&systemTheme.matches);
+  document.documentElement.dataset.theme=dark?'dark':'light';
+  const toggle=document.querySelector('.theme-toggle');
+  const label=dark?'Açık temaya geç':'Koyu temaya geç';
+  toggle.innerHTML=icon(dark?'light_mode':'dark_mode');
+  toggle.setAttribute('aria-label',label);
+  toggle.title=label;
+  document.querySelector('meta[name=theme-color]').content=dark?'#12211a':'#163b2e';
+}
+systemTheme.addEventListener('change',applyTheme);
+applyTheme();
 let pack=null, files=new Set(), route=[], toastTimer, pdfUrl, media;
 let words=[...baseWords], tasks=[...baseTasks,...vocabularyQuestions(baseWords)];
 let wordQuery='', wordTopic='', wordLimit=60;
@@ -72,7 +85,7 @@ function stopSpeech(){
   if('speechSynthesis' in window)speechSynthesis.cancel();
 }
 function startOfView(){
-  window.scrollTo({top:0,behavior:'instant'});
+  window.scrollTo({top:0,behavior:'auto'});
   main.focus({preventScroll:true});
 }
 function to(hash){
@@ -328,7 +341,7 @@ function sources(){
     </div>`;
 }
 function settings(){
-  const {daily,days,examDate,level}=state.settings;
+  const {daily,days,examDate,level,theme}=state.settings;
   return intro('Ayarlar','Çalışma temposunu ayarla veya verini başka bir cihaza taşı.')+
     `<div class="dual"><form class="card" id="settings-form">
       ${head('Çalışma planı')}
@@ -340,6 +353,7 @@ function settings(){
       </div><button class="button" type="submit">${icon('check')} Planı kaydet</button>
     </form>
     <div class="stack">
+      <section class="card"><h2>Görünüm</h2><label class="field theme-field">Tema<select id="theme-setting">${option('system','Sistem temasını izle',theme==='system')}${option('light','Açık',theme==='light')}${option('dark','Koyu',theme==='dark')}</select></label></section>
       <section class="card"><h2>Yedekleme</h2><p class="footer-note">Yedek dosyası ayarlarını, ilerlemeni ve yüklediğin çalışma paketini taşır. Bağlı PDF’leri diğer cihazda yeniden seçebilirsin.</p><div class="actions">${button('Yedeği indir','backup','','download','secondary')}${button('Yedek yükle','restore','','upload','secondary')}</div></section>
       <section class="card"><h2>Kurulum</h2><p class="footer-note">iPhone ve iPad’de Safari’de Paylaş → Ana Ekrana Ekle. Mac ve Windows’ta tarayıcıdan aynı adresi aç.</p><p class="footer-note" id="offline-info">Çevrimdışı durum kontrol ediliyor…</p><div class="actions">${inline('Kaynaklara git','#kaynaklar')}</div></section>
       <section class="card"><h2>Konuşma kayıtları</h2><p class="footer-note">Bu cihazda kaydettiğin sesleri dinle veya dosya olarak indir.</p><div id="recording-list" class="meta-list"></div></section>
@@ -496,6 +510,13 @@ document.addEventListener('click',event=>{
   if(!target)return;
   const action=target.dataset.action,key=target.dataset.value||'';
   if(action.startsWith('session-')){session.action(action.slice(8),key);return;}
+  if(action==='toggle-theme'){
+    state.settings.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';
+    persist();applyTheme();
+    const select=document.querySelector('#theme-setting');
+    if(select)select.value=state.settings.theme;
+    return;
+  }
   if(action==='cards'){startCards(key);return;}
   if(action==='exam'){startExam(key);return;}
   if(action==='one-task'){const task=tasks.find(q=>q.id===key);if(task)startQuiz([task],skills[task.skill].name);return;}
@@ -521,7 +542,7 @@ document.addEventListener('click',event=>{
     if(backup?.kind!=='klar-backup'||backup.version!==1||!backup.state||!Array.isArray(backup.state.sessions))throw new Error('Geçerli bir Klar yedek dosyası seç.');
     if(backup.pack)await installPack(backup.pack);
     Object.assign(state,mergeState(state,backup.state));
-    persist();render();notify('Yedekteki çalışmalar cihazındaki ilerlemeye eklendi.');
+    persist();applyTheme();render();notify('Yedekteki çalışmalar cihazındaki ilerlemeye eklendi.');
   });
 });
 document.addEventListener('submit',event=>{
@@ -530,7 +551,7 @@ document.addEventListener('submit',event=>{
   const data=new FormData(event.target);
   const days=data.getAll('days').map(Number);
   if(!days.length){notify('En az bir çalışma günü seç.');return;}
-  state.settings=normalizeState({settings:{daily:Number(data.get('daily')),days,level:data.get('level'),examDate:data.get('examDate')}}).settings;
+  state.settings=normalizeState({settings:{daily:Number(data.get('daily')),days,level:data.get('level'),examDate:data.get('examDate'),theme:state.settings.theme}}).settings;
   persist();to('plan');notify('Çalışma planı güncellendi.');
 });
 document.addEventListener('input',event=>{
@@ -538,6 +559,7 @@ document.addEventListener('input',event=>{
   if(event.target.matches('[data-session-input]'))session.input(event.target);
 });
 document.addEventListener('change',event=>{
+  if(event.target.id==='theme-setting'){state.settings.theme=event.target.value;persist();applyTheme();return;}
   if(event.target.id==='exam-set'){selectedExam=Number(event.target.value)||0;render();return;}
   if(event.target.id==='task-topic'){taskTopic=event.target.value;taskLimit=30;render();return;}
   if(event.target.id==='task-type'){taskType=event.target.value;taskLimit=30;render();return;}

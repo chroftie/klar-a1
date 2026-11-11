@@ -1,7 +1,7 @@
 import { lessons } from './data/course.js';
 
 const stateKey='klar-study-v1';
-export const defaults={daily:20, days:[1,2,3,4,5], examDate:'', level:'new'};
+export const defaults={daily:20, days:[1,2,3,4,5], examDate:'', level:'new', theme:'system'};
 export function emptyState(){
   return {createdAt:Date.now(),settings:{...defaults,days:[...defaults.days]},attempts:[],sessions:[],cards:{},lessons:{},exams:[]};
 }
@@ -29,6 +29,7 @@ export function normalizeState(raw){
     days:days.length?days:base.settings.days,
     examDate:typeof settings.examDate==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(settings.examDate)&&!isNaN(fromKey(settings.examDate).getTime())?settings.examDate:'',
     level:['new','some','exam'].includes(settings.level)?settings.level:'new',
+    theme:['system','light','dark'].includes(settings.theme)?settings.theme:'system',
   };
   base.attempts=byId(raw.attempts,a=>typeof a.task==='string'&&typeof a.skill==='string'&&Number.isFinite(a.at)&&Number.isFinite(a.score)&&a.score>=0&&a.score<=1).map(a=>({...a,self:Boolean(a.self)}));
   base.sessions=byId(raw.sessions,s=>Number.isFinite(s.at)&&Number.isInteger(s.minutes)&&s.minutes>=1&&s.minutes<=120);

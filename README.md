@@ -14,6 +14,8 @@ iPhone ve iPad’de Safari’de **Paylaş → Ana Ekrana Ekle** ile Klar’ı uy
 
 Tarayıcı çalışma verisini yerel olarak saklar. Kişisel PDF’leri **Kaynaklar** bölümünde tek tek bağlayabilirsin. PDF’ler ve ses kayıtları ayrı olarak cihazda tutulur. Kayıtları **Ayarlar → Konuşma kayıtları** bölümünden indirebilirsin. Yazma ve konuşmada model yanıt ve öz değerlendirme bulunur. Deneme puanları çalışma takibi içindir.
 
+Açık ve koyu tema arasında üst çubuktan geçebilirsin. **Ayarlar → Görünüm** bölümünde sistem temasını izleme seçeneği de var.
+
 ## Yerel geliştirme
 
 Bu klasörde `python3 -m http.server 8157 --bind 127.0.0.1` komutunu çalıştır ve `http://127.0.0.1:8157/` adresini aç. GitHub Pages, `main` dalının kök dizininden yayımlanır. Çevrimdışı dosyaları değiştirdiğinde `sw.js` içindeki önbellek sürümünü güncelle. `private/` klasörü kişisel dosyalar içindir ve Git tarafından yok sayılır.

@@ -9,6 +9,7 @@
   <link rel="icon" href="./assets/icon-192.png">
   <link rel="apple-touch-icon" href="./assets/icon-180.png">
   <link rel="manifest" href="./manifest.webmanifest">
+  <script src="./theme.js"></script>
   <link rel="stylesheet" href="./assets/fonts.css">
   <link rel="stylesheet" href="./styles.css">
   <title>Klar · Almanca A1</title>
@@ -20,8 +21,8 @@
       <a class="brand" href="#bugun" aria-label="Klar ana sayfa"><span class="brand-mark">K<span></span></span><span>Klar<span class="brand-dot">.</span><small>Almanca A1</small></span></a>
       <nav id="navigation"></nav>
       <div class="sidebar-bottom">
-        <a class="nav-link" href="#kaynaklar" data-route="kaynaklar"><span class="mi" aria-hidden="true">folder_open</span><span>Kaynaklar</span></a>
-        <a class="nav-link" href="#ayarlar" data-route="ayarlar"><span class="mi" aria-hidden="true">settings</span><span>Ayarlar</span></a>
+        <a class="nav-link" href="#kaynaklar" data-route="kaynaklar" aria-label="Kaynaklar"><span class="mi" aria-hidden="true">folder_open</span><span>Kaynaklar</span></a>
+        <a class="nav-link" href="#ayarlar" data-route="ayarlar" aria-label="Ayarlar"><span class="mi" aria-hidden="true">settings</span><span>Ayarlar</span></a>
         <div class="device-note"><span></span> İlerleme bu cihazda saklanır</div>
       </div>
     </aside>
@@ -29,7 +30,7 @@
       <header class="topbar">
         <a class="brand mobile-brand" href="#bugun"><span class="brand-mark">K<span></span></span>Klar<span class="brand-dot">.</span></a>
         <span id="breadcrumb"></span>
-        <div class="topbar-end"><time id="today-date"></time><a class="icon-btn top-settings" href="#ayarlar" aria-label="Ayarlar"><span class="mi" aria-hidden="true">settings</span></a></div>
+        <div class="topbar-end"><time id="today-date"></time><button class="icon-btn theme-toggle" type="button" data-action="toggle-theme" aria-label="Temayı değiştir"></button><a class="icon-btn top-settings" href="#ayarlar" aria-label="Ayarlar"><span class="mi" aria-hidden="true">settings</span></a></div>
       </header>
       <main id="content" tabindex="-1"></main>
     </div>
