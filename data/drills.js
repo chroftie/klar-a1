@@ -1,0 +1,88 @@
+const match=(i,topic,stem,explain,pairs)=>({id:'match-'+i,kind:'match',skill:'grammar',topic,stem,explain,pairs});
+const fill=(i,topic,stem,explain,fields)=>({id:'fill-'+i,kind:'form',skill:'grammar',topic,stem,explain,fields:fields.map(([label,...answers])=>({label,answers}))});
+const ordering=(i,topic,stem,tokens,explain)=>({id:'order-'+i,kind:'order',skill:'grammar',topic,stem,tokens,
+  text:'Beginnen Sie mit: '+tokens[0],explain});
+const numbers=[
+  [0,'null'],[1,'eins'],[2,'zwei'],[3,'drei'],[4,'vier'],[5,'fünf'],[6,'sechs'],[7,'sieben'],[8,'acht'],[9,'neun'],
+  [10,'zehn'],[11,'elf'],[12,'zwölf'],[13,'dreizehn'],[14,'vierzehn'],[15,'fünfzehn'],[16,'sechzehn'],[17,'siebzehn'],
+  [18,'achtzehn'],[19,'neunzehn'],[20,'zwanzig'],[21,'einundzwanzig'],[24,'vierundzwanzig'],[27,'siebenundzwanzig'],
+  [30,'dreißig'],[32,'zweiunddreißig'],[35,'fünfunddreißig'],[40,'vierzig'],[45,'fünfundvierzig'],[50,'fünfzig'],
+  [54,'vierundfünfzig'],[60,'sechzig'],[67,'siebenundsechzig'],[70,'siebzig'],[78,'achtundsiebzig'],[80,'achtzig'],[86,'sechsundachtzig'],[90,'neunzig'],[99,'neunundneunzig'],[100,'hundert','einhundert'],
+];
+const numberSets=Array.from({length:8},(_,i)=>fill('number-'+i,'saat','Sayıları Almanca yaz · '+(i+1),
+  i<4?'16 sechzehn, 17 siebzehn. 21’den itibaren birler önce gelir.':'24 = vier und zwanzig → vierundzwanzig. Sayıları bitişik yaz.',
+  numbers.slice(i*5,i*5+5).map(([n,...answers])=>[n+' = ___',...answers])));
+const orderLines=[
+  ['tanisma','Woher|kommen|Sie?','Woher’den sonra fiil gelir.'],
+  ['tanisma','Ich|spreche|ein bisschen|Deutsch.','Ein bisschen, biraz. Çekimli fiil ikinci öğe.'],
+  ['aile','Das|sind|meine Eltern.','Eltern çoğul, sind kullanılır.'],
+  ['aile','Hast|du|Geschwister?','Evet/hayır sorusu çekimli fiille başlar.'],
+  ['kurs','Können|Sie|das|bitte|wiederholen?','Können ilk sırada, wiederholen sonda.'],
+  ['kurs','Ich|verstehe|die Frage|nicht.','Olumsuzlanan fiil için nicht.'],
+  ['alisveris','Wie viel|kostet|die Milch?','Wie viel bir bütün. Soru öğesinden sonra kostet.'],
+  ['alisveris','Ich|möchte|einen Kaffee.','Kaffee eril, nesne halinde einen.'],
+  ['saat','Heute|stehe|ich|um acht Uhr|auf.','Heute birinci öğe, stehe ikinci öğe, auf sonda.'],
+  ['saat','Wir|treffen|uns|am Samstag.','Sich treffen dönüşlü fiil. Wir ile uns.'],
+  ['ev','Der Tisch|steht|neben|dem Fenster.','Konum bildiren neben ile dativ.'],
+  ['ev','Ich|suche|eine kleine Wohnung.','Wohnung dişil. Bir daire, eine Wohnung.'],
+  ['ulasim','Wie|komme|ich|zum Bahnhof?','Zum, zu dem’in kısaltması.'],
+  ['ulasim','Der Zug|fährt|von Gleis fünf|ab.','Abfahren ayrılabilir.'],
+  ['is','Sie|kann|am Samstag|arbeiten.','Sie tekil. Kann çekimli, arbeiten sonda.'],
+  ['is','Um neun Uhr|beginnt|die Arbeit.','Saat birinci öğe olduğu için özne fiilden sonra.'],
+  ['saglik','Mein Rücken|tut|mir|weh.','Wehtun ayrılabilir, weh sonda.'],
+  ['saglik','Haben|Sie|morgen|einen Termin|frei?','Fiil başta. Einen Termin, boş randevu var mı?'],
+  ['gecmis','Wir|sind|nach Bonn|gefahren.','Fahren hareket bildirirken sein ile Perfekt kurar.'],
+  ['gecmis','Ich|habe|gestern|gearbeitet.','Partizip II cümlenin sonunda.'],
+  ['giyim','Kann|ich|die Jacke|anprobieren?','Kann çekimli fiil, anprobieren mastarı sonda.'],
+  ['giyim','Welche Farbe|gefällt|Ihnen?','Gefallen dativ ister, Ihnen resmî size.'],
+  ['davet','Kannst|du|am Freitag|kommen?','Kannst çekimli, kommen sonda.'],
+  ['davet','Ich|lade|dich|zu meiner Party|ein.','Einladen ayrılır, ein sonda.'],
+];
+const grammarDrills=[
+  ...numberSets,
+  match(1,'tanisma','Selamlaşma ve vedalaşma','Gün içinde ve resmî konuşmada farklı kalıplar kullanılır.',
+    [['Guten Morgen!','Günaydın!'],['Guten Abend!','İyi akşamlar!'],['Auf Wiedersehen!','Görüşmek üzere!'],['Gute Nacht!','İyi geceler!']]),
+  match(2,'saat','Saati eşleştir','Halb ile bir sonraki saat söylenir. Vor kala, nach geçe.',
+    [['halb neun','08:30'],['Viertel vor acht','07:45'],['Viertel nach sechs','06:15'],['zehn nach fünf','05:10']]),
+  match(3,'ulasim','Yol tarifi kalıpları','Links sol, rechts sağ, geradeaus düz. An der Ecke köşede.',
+    [['geradeaus gehen','düz gitmek'],['links abbiegen','sola dönmek'],['an der Ecke warten','köşede beklemek'],['über die Brücke gehen','köprüden geçmek']]),
+  match(4,'gecmis','Fiil ve geçmiş zaman','Gehen, kommen, fahren sein; arbeiten haben ile Perfekt kurar.',
+    [['gehen','ist gegangen'],['kommen','ist gekommen'],['fahren','ist gefahren'],['arbeiten','hat gearbeitet']]),
+  match(5,'giyim','Sıfat ve zıttı','Zu klein, gereğinden küçük. Das Gegenteil, zıttı demek.',
+    [['groß','klein'],['teuer','billig'],['neu','alt'],['hell','dunkel']]),
+  match(6,'davet','Davet ve cevap','Danke ve leider kalıpları kısa mesajlarda sık kullanılır.',
+    [['Kommst du zu meiner Feier?','Ja, danke für die Einladung!'],['Wann beginnt der Film?','Um acht Uhr.'],['Wo treffen wir uns?','Vor dem Kino.'],['Möchtest du einen Kaffee?','Ja, gern.']]),
+  fill('article-1','kurs','Belirli artikel','İsimlerin artikelini kelimeyle birlikte öğren.',
+    [['___ Buch','das'],['___ Heft','das'],['___ Stift','der'],['___ Frage','die'],['___ Prüfung','die']]),
+  fill('article-2','ev','Evdeki eşyaların artikeli','Der Tisch, der Stuhl ve der Schrank eril. Das Bett nötr.',
+    [['___ Tisch','der'],['___ Stuhl','der'],['___ Schrank','der'],['___ Bett','das'],['___ Tür','die'],['___ Fenster','das']]),
+  fill('negative','kurs','Nicht veya kein','İsmi olumsuzlamak için kein/keine, fiili veya sıfatı olumsuzlamak için nicht.',
+    [['Das ist ___ Buch.','kein'],['Ich habe ___ Zeit.','keine'],['Er kommt heute ___.','nicht'],['Das sind ___ Äpfel.','keine'],['Die Küche ist ___ groß.','nicht']]),
+  fill('modal','is','Modal fiiller','Müssen zorunluluk, können beceri veya imkân, wollen istek.',
+    [['Ich ___ morgen arbeiten. (müssen)','muss'],['___ du Deutsch sprechen? (können)','kannst'],['Wir ___ heute nach Hause gehen. (wollen)','wollen'],['Ihr ___ hier warten. (sollen)','sollt']]),
+  fill('accusative','alisveris','Akkusativ artikelleri','Eril der → den. Die ve das değişmez.',
+    [['Ich nehme ___ Tee. (ein)','einen'],['Ich kaufe ___ Banane. (ein)','eine'],['Ich brauche ___ Glas. (ein)','ein'],['Ich suche ___ Pullover. (der)','den']]),
+  fill('dates','davet','Günler ve aylar','Am + gün, im + ay veya mevsim.',
+    [['Wir treffen uns ___ Samstag.','am'],['Die Reise ist ___ Mai.','im'],['Ich fahre ___ Sommer nach Wien.','im'],['___ Montag ist der Laden geschlossen.','am']]),
+  ...orderLines.map(([topic,line,explain],i)=>ordering(i+1,topic,'Cümleyi sırala',line.split('|'),explain)),
+];
+
+const dictationText=[
+  ['tanisma','Ich komme aus der Türkei.','Türkiye’den geliyorum.'],
+  ['aile','Meine Schwester ist zwölf Jahre alt.','Kız kardeşim on iki yaşında.'],
+  ['kurs','Der Unterricht beginnt um neun.','Ders saat dokuzda başlıyor.'],
+  ['alisveris','Ein Glas Wasser, bitte.','Bir bardak su, lütfen.'],
+  ['saat','Wir treffen uns um halb neun.','Saat sekiz buçukta buluşuyoruz.'],
+  ['ev','Die Wohnung hat drei Zimmer.','Daire üç odalı.'],
+  ['ulasim','Der Zug kommt um zehn an.','Tren saat onda geliyor.'],
+  ['is','Ich kann am Samstag arbeiten.','Cumartesi çalışabilirim.'],
+  ['saglik','Mein Rücken tut weh.','Sırtım ağrıyor.'],
+  ['gecmis','Wir sind nach Köln gefahren.','Köln’e gittik.'],
+  ['giyim','Die Hose passt mir gut.','Pantolon bana tam oluyor.'],
+  ['davet','Hast du am Freitag Zeit?','Cuma günü vaktin var mı?'],
+];
+export const dictations=dictationText.map(([topic,transcript,explain],i)=>({
+  id:'dictation-'+(i+1),kind:'form',skill:'listening',topic,stem:'Duyduğunu yaz',
+  fields:[{label:'Almanca cümle',answers:[transcript]}],audio:`./assets/audio/dictation-${i+1}.mp3`,transcript,explain,
+}));
+export const drills=[...grammarDrills,...dictations];

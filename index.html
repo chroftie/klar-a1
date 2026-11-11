@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#163b2e">
+  <meta name="description" content="Almanca A1 öğrenme ve Goethe Start Deutsch 1 hazırlık uygulaması.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="icon" href="./assets/icon-192.png">
+  <link rel="apple-touch-icon" href="./assets/icon-180.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./assets/fonts.css">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Klar · Almanca A1</title>
+</head>
+<body>
+  <a class="skip" href="#content">İçeriğe geç</a>
+  <div id="app">
+    <aside class="sidebar" aria-label="Ana menü">
+      <a class="brand" href="#bugun" aria-label="Klar ana sayfa"><span class="brand-mark">K<span></span></span><span>Klar<span class="brand-dot">.</span><small>Almanca A1</small></span></a>
+      <nav id="navigation"></nav>
+      <div class="sidebar-bottom">
+        <a class="nav-link" href="#kaynaklar" data-route="kaynaklar"><span class="mi" aria-hidden="true">folder_open</span><span>Kaynaklar</span></a>
+        <a class="nav-link" href="#ayarlar" data-route="ayarlar"><span class="mi" aria-hidden="true">settings</span><span>Ayarlar</span></a>
+        <div class="device-note"><span></span> İlerleme bu cihazda saklanır</div>
+      </div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <a class="brand mobile-brand" href="#bugun"><span class="brand-mark">K<span></span></span>Klar<span class="brand-dot">.</span></a>
+        <span id="breadcrumb"></span>
+        <div class="topbar-end"><time id="today-date"></time><a class="icon-btn top-settings" href="#ayarlar" aria-label="Ayarlar"><span class="mi" aria-hidden="true">settings</span></a></div>
+      </header>
+      <main id="content" tabindex="-1"></main>
+    </div>
+  </div>
+  <div id="status" role="status" aria-live="polite"></div>
+  <dialog id="dialog"></dialog>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+export const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+export const icon=name=>`<span class="mi" aria-hidden="true">${name}</span>`;
+export const tile=(name,tone='')=>`<span class="icon-tile ${tone?'tone-'+tone:''}">${icon(name)}</span>`;
+export const button=(label,action,data='',glyph='',style='')=>`<button type="button" class="button ${style}" data-action="${action}" data-value="${esc(data)}">${glyph?icon(glyph):''}${esc(label)}</button>`;
+export const link=(label,url,glyph='',style='')=>`<a class="button ${style}" href="${esc(url)}">${glyph?icon(glyph):''}${esc(label)}</a>`;
+export const inline=(label,url)=>`<a class="inline-link" href="${esc(url)}">${esc(label)} ${icon('arrow_forward')}</a>`;
+export const pill=(label,glyph='')=>`<span class="pill">${glyph?icon(glyph):''}${esc(label)}</span>`;
+export const track=(done,total,label)=>`<div class="track" role="progressbar" aria-label="${esc(label)}" aria-valuemin="0" aria-valuemax="${Math.max(1,total)}" aria-valuenow="${Math.max(0,Math.min(done,total))}"><i style="width:${total?Math.max(0,Math.min(100,done/total*100)):0}%"></i></div>`;
+export const fmt=(date,options)=>new Intl.DateTimeFormat('tr-TR',options).format(date);
+export const pct=value=>`%${Math.round(value*100)}`;
+export const intro=(title,description='',badge='')=>`<div class="intro"><div><h1>${esc(title)}</h1>${description?`<p>${esc(description)}</p>`:''}</div>${badge}</div>`;
+export const head=(title,aside='',description='')=>`<div class="section-head"><div><h2>${esc(title)}</h2>${description?`<p>${esc(description)}</p>`:''}</div>${aside}</div>`;
+export const option=(value,label,selected)=>`<option value="${esc(value)}" ${selected?'selected':''}>${esc(label)}</option>`;
